@@ -1,0 +1,39 @@
+/* ปรับ header ให้มีขนาดพอดีกับมือถือ */
+@media (max-width: 600px) {
+    header {
+      padding: 8px;  /* ปรับ padding ให้เล็กลง */
+      font-size: 14px; /* ลดขนาดตัวอักษร */
+    }
+  
+    /* ปรับขนาดโลโก้ */
+    .election-logo1 {
+      width: 50px; /* ปรับขนาดโลโก้ให้เล็กลง */
+      height: auto;
+    }
+  
+    /* ปรับข้อความใน header ให้เหมาะสม */
+    h1 {
+      font-size: 18px;
+    }
+  
+    .election-p {
+      font-size: 12px;
+    }
+  
+    /* เพิ่ม padding ใน container ให้เนื้อหาไม่ถูกบัง */
+    .container {
+      padding-top: 80px; /* เพิ่ม padding ให้มากขึ้น */
+    }
+  
+    /* ปรับขนาดของปุ่มในเมนู */
+    .btn {
+      font-size: 12px; /* ลดขนาดฟอนต์ */
+      padding: 10px 15px; /* ปรับขนาดปุ่ม */
+    }
+  
+    /* ปรับขนาดของ footer */
+    footer {
+      font-size: 10px;
+    }
+  }
+  

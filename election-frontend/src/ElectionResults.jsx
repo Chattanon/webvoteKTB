@@ -29,6 +29,7 @@ const ElectionResults = () => {
     setSubmittedResults([...submittedResults, { unit: selectedUnit, ...votes }]);
     setVotes({ candidate1: "", candidate2: "", candidate3: "" });
   };
+  
 
   return (
     <div className="results-container">

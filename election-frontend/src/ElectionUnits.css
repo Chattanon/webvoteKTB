@@ -10,7 +10,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 1.5rem;
+    padding: 2rem;
   }
   
   .max-w-4xl {
@@ -41,6 +41,7 @@ body {
   /* Header Title and Button Styling */
   .text-2xl {
     font-size: 1.5rem;
+    margin-left:0.5rem ;
   }
   
   .font-bold {
@@ -54,6 +55,12 @@ body {
   .px-4,
   .py-2 {
     padding: 0.5rem 1rem;
+    margin-left: 70rem;
+  }
+  .px-4,
+  .py-3 {
+    padding: 0.5rem 1rem;
+    
   }
   
   .bg-blue-500 {

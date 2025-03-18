@@ -4,6 +4,7 @@ import ElectionUnits from "./ElectionUnits";
 import ElectionResultsPage from "./ElectionResultsPage";
 import ElectionResults from "./ElectionResults";
 import CandidatePage from "./CandidatePage";
+import "./mediaQuery.css";
 
 function App() {
   return (

@@ -1,14 +1,13 @@
 /* ElectionResults.css */
 
 /* ส่วนของ Container หลัก */
-.election-container {
+/* .election-container {
     font-family: 'Prompt', 'Kanit', sans-serif;
     max-width: max-content;
     margin: 0 auto;
     background-color: #ffffff;
-   
     overflow: hidden;
-  }
+  } */
   
   /* ส่วนหัวของหน้าเพจ */
   .election-header {
@@ -104,7 +103,16 @@
   .candidate-info {
     flex-grow: 1;
   }
-  
+  /* ElectionResultsPage.css */
+.candidate-image img {
+  width: 120px; /* or any size you prefer */
+  height: 150px;
+  border-color: #798484;
+  border-radius: 10px;
+  border-style: solid;
+  margin-right: 10px;
+}
+
   .candidate-header {
     display: flex;
     justify-content: space-between;

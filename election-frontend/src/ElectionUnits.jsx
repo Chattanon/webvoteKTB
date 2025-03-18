@@ -30,7 +30,7 @@ const ElectionUnits = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button className="px-4 py-2 bg-green-500 text-white rounded-lg">➕ เพิ่มเขต</button>
+          <button className="px-3 py-3 bg-green-500 text-white rounded-lg">➕ เพิ่มเขต</button>
         </div>
 
         <table className="w-full mt-4 border-collapse">
