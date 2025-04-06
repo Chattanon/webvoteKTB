@@ -1,0 +1,56 @@
+/* Login.css */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0; /* สีพื้นหลังเทาอ่อน */
+  }
+  
+  .login-box {
+    background-color: #5c95cd; /* สีเทากลาง */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    width: 320px;
+  }
+  
+  .login-box h2 {
+    margin-bottom: 20px;
+    color: #000000;
+  }
+  
+  .login-box input {
+    width: calc(100% - 20px); /* ขนาดช่องกรอกข้อความให้ชิดขอบ */
+    padding: 12px;
+    margin: 8px 0; /* ปรับระยะห่างระหว่าง input */
+    border: 1px solid #bbb;
+    border-radius: 5px;
+    background-color: #eee;
+    text-align: center; /* จัดข้อความตรงกลาง */
+    font-size: 16px;
+  }
+  
+  .login-box input:focus {
+    outline: none;
+    border-color: #888;
+    background-color: #fff;
+  }
+  
+  .login-box button {
+    width: 100%;
+    padding: 12px;
+    background-color: #085a78;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+    font-size: 16px;
+  }
+  
+  .login-box button:hover {
+    background-color: #444;
+  }
+  

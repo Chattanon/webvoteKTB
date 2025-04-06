@@ -1,9 +1,14 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./ElectionPage.css";
 
 const ElectionPage = () => {
-  // ✅ ฟังก์ชันนี้อยู่ภายใน ElectionPage แล้ว
+  const navigate = useNavigate();
+  
+    const handleLogout = () => {
+      localStorage.removeItem("auth"); // ลบ token ออกจาก localStorage
+      navigate("/login"); // กลับไปหน้า login
+    };
   const getLastUpdate = () => {
     const now = new Date();
     return new Intl.DateTimeFormat("th-TH", {
@@ -15,11 +20,14 @@ const ElectionPage = () => {
       second: "2-digit",
     }).format(now);
   };
-
   return (
     <div className="container">
       <header>
-        <img src="/assets/logo.png" className="election-logo1" alt="Election Logo" />
+        <img
+          src="/assets/logo.png"
+          className="election-logo1"
+          alt="Election Logo"
+        />
         <h1>เลือกตั้งนายกเทศมนตรี 2568</h1>
         <p className="election-p">เทศบาลเมืองกระทุ่มแบน</p>
       </header>
@@ -32,7 +40,10 @@ const ElectionPage = () => {
           <span>🖍 กรอกผลการเลือกตั้ง</span>
         </Link>
         <Link to="/summary" className="btn btn-green">
-          <span>📊 สรุปผลการเลือกตั้ง</span>
+          <span>📊 สรุปผลการเลือกตั้งบุคคล</span>
+        </Link>
+        <Link to="/summary2" className="btn btn-green">
+          <span>📊 สรุปผลการเลือกตั้งกราฟ</span>
         </Link>
         <Link to="/candidate" className="btn btn-pink">
           <span>📑 ผู้ลงสมัคร</span>
@@ -42,6 +53,8 @@ const ElectionPage = () => {
       <footer>
         <p>Developed by C.few</p>
         <p>Last Update: {getLastUpdate()}</p>
+        <button onClick={handleLogout}> ออกจากระบบ</button>
+
       </footer>
     </div>
   );

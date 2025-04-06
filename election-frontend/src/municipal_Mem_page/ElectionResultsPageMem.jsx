@@ -35,7 +35,7 @@ const ElectionResultsPage = () => {
       votes: 10409,
       percentage: 64.73,
       color: "#ff6b81",
-      image: "../public/assets/1697558103063_mr1697558176749.jpg", // Path to image
+      image: "/assets/1697558103063_mr1697558176749.jpg", // Path to image
     },
     {
       id: 2,
@@ -43,7 +43,7 @@ const ElectionResultsPage = () => {
       votes: 5672,
       percentage: 35.27,
       color: "#4cd137",
-      image: "../public/assets/michael-sum-LEpfefQf4rU-unsplash.jpg", // Path to image
+      image: "/assets/michael-sum-LEpfefQf4rU-unsplash.jpg", // Path to image
     },
   ];
 
