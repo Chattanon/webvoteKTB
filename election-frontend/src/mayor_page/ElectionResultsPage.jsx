@@ -16,6 +16,52 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 const ElectionResultsPage = () => {
   const theme = useTheme();
+  const [candidates, setCandidates] = useState([]);
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost/webvoteKTB/backend/get_candidates_api.php"
+        );
+        const data = await response.json();
+
+        // ดึง array จาก data.results หรือ data ตรง ๆ ถ้าไม่ได้ห่อไว้
+        const candidatesRaw = Array.isArray(data.results) ? data.results : data;
+
+        const totalVotes = candidatesRaw.reduce(
+          (sum, c) => sum + Number(c.votes),
+          0
+        );
+
+        const candidateStyles = {
+          1: { color: "#ffa502", image: "/assets/num1.png" },
+          2: { color: "#0d6ec0", image: "/assets/num2.png" },
+          3: { color: "#54ad8f", image: "/assets/num3.png" },
+        };
+
+        const updatedData = candidatesRaw.map((candidate) => ({
+          id: Number(candidate.id),
+          name: candidate.name,
+          votes: Number(candidate.votes),
+          percentage:
+            totalVotes > 0
+              ? ((Number(candidate.votes) / totalVotes) * 100).toFixed(2)
+              : "0.00",
+          color: candidateStyles[candidate.id]?.color || "#ccc",
+          image: candidateStyles[candidate.id]?.image || "/assets/default.png",
+        }));
+
+        setCandidates(updatedData);
+      } catch (error) {
+        console.error("Error fetching candidates:", error);
+      }
+    };
+
+    fetchCandidates();
+    const interval = setInterval(fetchCandidates, 5000); // รีเฟรชทุก 5 วินาที
+    return () => clearInterval(interval);
+  }, []);
 
   // State สำหรับเก็บเวลาปัจจุบัน
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -41,53 +87,45 @@ const ElectionResultsPage = () => {
   }, []);
 
   // ข้อมูลผู้สมัคร - เพิ่มเป็น 4 คนตามที่ต้องการ
-  const candidates = [
-    {
-      id: 1,
-      name: "นายอนิวัตน์ ขวัญบุญ",
-      votes: 0,
-      percentage: 0,
-      color: "#ffa502",
-      image: "/assets/mayor1.jpg",
-    },
-    {
-      id: 2,
-      name: "นายณภพ นุตสติ",
-      votes: 0,
-      percentage: 0,
-      color: "#0d6ec0",
-      image: "/assets/สกรีนช็อต 2025-04-03 131048.png",
-    },
-    {
-      id: 3,
-      name: "นางสาวสุดา รักชาติ",
-      votes: 0,
-      percentage: 0,
-      color: "#54ad8f",
-      image: "/assets/Icons8-Windows-8-Users-Name.512.png",
-    },
-    {
-      id: 4,
-      name: "นายประสิทธิ์ ใจดี",
-      votes: 0,
-      percentage: 0,
-      color: "#ffa796",
-      image: "/assets/Icons8-Windows-8-Users-Name.512.png",
-    },
-  ];
+  // const candidates = [
+  //   {
+  //     id: 1,
+  //     name: "นายอนิวัตน์ ขวัญบุญ",
+  //     votes: 0,
+  //     percentage: 0,
+  //     color: "#ffa502",
+  //     image: "/assets/num1.png",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "นายณภพ นุตสติ",
+  //     votes: 0,
+  //     percentage: 0,
+  //     color: "#0d6ec0",
+  //     image: "/assets/num2.png",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "นายวัสพล บุญวิวัฒน์",
+  //     votes: 0,
+  //     percentage: 0,
+  //     color: "#54ad8f",
+  //     image: "/assets/num3.png",
+  //   },
+  // ];
 
   // ข้อมูลสำหรับ pie chart (จำนวนผู้มาใช้สิทธิ์)
-  const voterTurnoutData = [
-    { name: "มาใช้สิทธิ์", value: 49.2, color: "#ff9f43" },
-    { name: "ไม่มาใช้สิทธิ์", value: 50.8, color: "#747d8c" },
-  ];
+  // const voterTurnoutData = [
+  //   { name: "มาใช้สิทธิ์", value: 49.2, color: "#ff9f43" },
+  //   { name: "ไม่มาใช้สิทธิ์", value: 50.8, color: "#747d8c" },
+  // ];
 
   // ข้อมูลสำหรับ pie chart (บัตรดี/บัตรเสีย)
-  const ballotData = [
-    { name: "บัตรดี", value: 97.5, color: "#54a0ff" },
-    { name: "บัตรเสีย", value: 1.5, color: "#ff6b6b" },
-    { name: "บัตรไม่ประสงค์ลงคะแนน", value: 1, color: "#a5b1c2" },
-  ];
+  // const ballotData = [
+  //   { name: "บัตรดี", value: 97.5, color: "#54a0ff" },
+  //   { name: "บัตรเสีย", value: 1.5, color: "#ff6b6b" },
+  //   { name: "บัตรไม่ประสงค์ลงคะแนน", value: 1, color: "#a5b1c2" },
+  // ];
 
   return (
     <Box
@@ -103,8 +141,8 @@ const ElectionResultsPage = () => {
         disableGutters
         sx={{
           height: "100%",
-          py: 2,
-          px: 2,
+          py: 3,
+          px: 0,
           display: "flex",
           flexDirection: "column",
         }}
@@ -117,7 +155,7 @@ const ElectionResultsPage = () => {
             mb: 3,
             borderRadius: 2,
             display: "flex",
-            alignItems: "end",
+            alignItems: "center",
             justifyContent: "space-between",
             background: "linear-gradient(135deg, #2193b0, #6dd5ed)",
             height: "9vh",
@@ -128,10 +166,10 @@ const ElectionResultsPage = () => {
             <Avatar
               src="/assets/logo.png"
               alt="Logo"
-              sx={{ width: 40, height: 40, mr: 1 }}
+              sx={{ width: 100, height: 100, mr: 3 }}
             />
             <Typography
-              variant="h6"
+              variant="h4"
               sx={{ color: "white", fontWeight: "bold" }}
             >
               เลือกตั้งนายกเทศมนตรีเมืองกระทุ่มแบน
@@ -147,10 +185,12 @@ const ElectionResultsPage = () => {
               borderRadius: 1,
             }}
           >
-            <AccessTimeIcon sx={{ color: "white", mr: 1, fontSize: "1rem" }} />
+            <AccessTimeIcon
+              sx={{ color: "black", mr: 1, fontSize: "1.5rem" }}
+            />
             <Typography
-              variant="body2"
-              sx={{ color: "#02223d", fontWeight: "medium" }}
+              variant="h5"
+              sx={{ color: "#02223d", fontWeight: "bold" }}
             >
               อัปเดตล่าสุด: {formatTime(currentTime)}
             </Typography>
@@ -192,9 +232,9 @@ const ElectionResultsPage = () => {
                 </Typography>
 
                 {/* แสดงผู้สมัครจำนวน 4 คนเป็น grid 2x2 */}
-                <Grid container spacing={2} sx={{ mb: 2, flexGrow: 1 }}>
+                <Grid container spacing={10} sx={{ mb: 5, flexGrow: 1 }}>
                   {candidates.map((candidate) => (
-                    <Grid item xs={12} sm={6} key={candidate.id}>
+                    <Grid item xs={12} sm={10} key={candidate.id}>
                       <Card
                         elevation={3}
                         sx={{
@@ -203,8 +243,8 @@ const ElectionResultsPage = () => {
                           justifyContent: "space-between",
                           height: "100%",
                           minHeight: "150px",
-                          borderLeft: `6px solid ${candidate.color}`,
-                          borderRadius: 2,
+                          borderLeft: `10px solid ${candidate.color}`,
+                          borderRadius: 3,
                           transition: "transform 0.2s",
                           "&:hover": {
                             transform: "translateY(-4px)",
@@ -222,7 +262,7 @@ const ElectionResultsPage = () => {
                           <Avatar
                             src={candidate.image}
                             alt={candidate.name}
-                            sx={{ width: 220, height: 200 }}
+                            sx={{ width: 220, height: 300 }}
                             variant="rounded"
                           />
                           <Box
@@ -245,9 +285,9 @@ const ElectionResultsPage = () => {
                                 <Avatar
                                   sx={{
                                     bgcolor: candidate.color,
-                                    width: 30,
-                                    height: 30,
-                                    fontSize: "1rem",
+                                    width: 50,
+                                    height: 50,
+                                    fontSize: "1.5rem",
                                     mr: 1,
                                     fontWeight: "bold",
                                   }}
@@ -258,8 +298,8 @@ const ElectionResultsPage = () => {
                                   variant="h6"
                                   sx={{
                                     fontWeight: "bold",
-                                    fontSize: "1.1rem",
-                                    p: 1,
+                                    fontSize: "1.4rem",
+                                    p: 3,
                                   }}
                                 >
                                   {candidate.name}
@@ -267,10 +307,10 @@ const ElectionResultsPage = () => {
                               </Box>
 
                               <Typography
-                                variant="body1"
+                                variant="h4"
                                 sx={{
                                   mb: 1.5,
-                                  fontSize: "1.1rem",
+                                  fontSize: "1.7rem",
                                   fontWeight: "medium",
                                 }}
                               >
@@ -292,7 +332,7 @@ const ElectionResultsPage = () => {
                                     variant="determinate"
                                     value={candidate.percentage}
                                     sx={{
-                                      height: 10,
+                                      height: 25,
                                       borderRadius: 4,
                                       bgcolor: "rgba(0,0,0,0.1)",
                                       "& .MuiLinearProgress-bar": {
@@ -305,7 +345,7 @@ const ElectionResultsPage = () => {
                                   variant="body1"
                                   fontWeight="bold"
                                   sx={{
-                                    fontSize: "1.1rem",
+                                    fontSize: "1.4rem",
                                     minWidth: "54px",
                                     textAlign: "right",
                                   }}
@@ -386,9 +426,10 @@ const ElectionResultsPage = () => {
                         fontWeight: "bold",
                         color: "red", // สีที่แน่ใจว่าใช้งานได้
                         fontSize: "1.2rem",
+                        textDecoration: "underline",
                       }}
                     >
-                      คะแนนผลการเลือกตั้งอย่างไม่เป็นทางการ
+                      "คะแนนผลการเลือกตั้งอย่างไม่เป็นทางการ"
                     </Typography>
                   </Box>
                 </Paper>
