@@ -11,19 +11,29 @@ import {
   Paper,
   Divider,
   useTheme,
+  Tooltip,
+  Chip,
 } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import HowToVoteIcon from "@mui/icons-material/HowToVote";
+import UpdateIcon from "@mui/icons-material/Update";
+import PersonIcon from "@mui/icons-material/Person";
+import FlagIcon from "@mui/icons-material/Flag";
+import { getFullAPI } from "../api/apiConfig";
 
 const ElectionResultsPage = () => {
   const theme = useTheme();
   const [candidates, setCandidates] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [processedPollingStations, setProcessedPollingStations] = useState(4);
+  const totalPollingStations = 18;
 
   useEffect(() => {
     const fetchCandidates = async () => {
+      setLoadingData(true);
       try {
-        const response = await fetch(
-          "http://localhost/webvoteKTB/backend/get_candidates_api.php"
-        );
+        const response = await fetch(getFullAPI("get_candidates_api.php"));
         const data = await response.json();
 
         // ดึง array จาก data.results หรือ data ตรง ๆ ถ้าไม่ได้ห่อไว้
@@ -35,9 +45,9 @@ const ElectionResultsPage = () => {
         );
 
         const candidateStyles = {
-          1: { color: "#ffa502", image: "/assets/num1.png" },
-          2: { color: "#0d6ec0", image: "/assets/num2.png" },
-          3: { color: "#54ad8f", image: "/assets/num3.png" },
+          1: { color: "#FF8C00", image: "/assets/num1.png" },
+          2: { color: "#1976D2", image: "/assets/num2.png" },
+          3: { color: "#2E8B57", image: "/assets/num3.png" },
         };
 
         const updatedData = candidatesRaw.map((candidate) => ({
@@ -52,9 +62,15 @@ const ElectionResultsPage = () => {
           image: candidateStyles[candidate.id]?.image || "/assets/default.png",
         }));
 
+        // เรียงลำดับตามคะแนนจากมากไปน้อย
+        updatedData.sort((a, b) => b.votes - a.votes);
+
         setCandidates(updatedData);
+        setLastUpdate(new Date());
       } catch (error) {
         console.error("Error fetching candidates:", error);
+      } finally {
+        setLoadingData(false);
       }
     };
 
@@ -68,6 +84,7 @@ const ElectionResultsPage = () => {
 
   // ฟังก์ชันสำหรับฟอร์แมตเวลาให้อยู่ในรูปแบบ HH:MM:SS
   const formatTime = (date) => {
+    if (!date) return "--:--:--";
     const hours = date.getHours().toString().padStart(2, "0");
     const minutes = date.getMinutes().toString().padStart(2, "0");
     const seconds = date.getSeconds().toString().padStart(2, "0");
@@ -86,359 +103,435 @@ const ElectionResultsPage = () => {
     };
   }, []);
 
-  // ข้อมูลผู้สมัคร - เพิ่มเป็น 4 คนตามที่ต้องการ
-  // const candidates = [
-  //   {
-  //     id: 1,
-  //     name: "นายอนิวัตน์ ขวัญบุญ",
-  //     votes: 0,
-  //     percentage: 0,
-  //     color: "#ffa502",
-  //     image: "/assets/num1.png",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "นายณภพ นุตสติ",
-  //     votes: 0,
-  //     percentage: 0,
-  //     color: "#0d6ec0",
-  //     image: "/assets/num2.png",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "นายวัสพล บุญวิวัฒน์",
-  //     votes: 0,
-  //     percentage: 0,
-  //     color: "#54ad8f",
-  //     image: "/assets/num3.png",
-  //   },
-  // ];
-
-  // ข้อมูลสำหรับ pie chart (จำนวนผู้มาใช้สิทธิ์)
-  // const voterTurnoutData = [
-  //   { name: "มาใช้สิทธิ์", value: 49.2, color: "#ff9f43" },
-  //   { name: "ไม่มาใช้สิทธิ์", value: 50.8, color: "#747d8c" },
-  // ];
-
-  // ข้อมูลสำหรับ pie chart (บัตรดี/บัตรเสีย)
-  // const ballotData = [
-  //   { name: "บัตรดี", value: 97.5, color: "#54a0ff" },
-  //   { name: "บัตรเสีย", value: 1.5, color: "#ff6b6b" },
-  //   { name: "บัตรไม่ประสงค์ลงคะแนน", value: 1, color: "#a5b1c2" },
-  // ];
+  // คำนวณคะแนนทั้งหมด
+  const totalVotes = candidates.reduce(
+    (sum, candidate) => sum + candidate.votes,
+    0
+  );
 
   return (
     <Box
       sx={{
-        width: "100vw",
-        height: "100vh",
+        width: "1920px", // กำหนดความกว้างคงที่
+        height: "1080px", // กำหนดความสูงคงที่
         overflow: "hidden",
-        bgcolor: theme.palette.background.default,
+        bgcolor: "#f5f7fa",
+        backgroundImage: "linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%)",
+        margin: "0 auto", // จัดกึ่งกลาง
       }}
     >
       <Container
         maxWidth={false}
         disableGutters
         sx={{
-          height: "100%",
-          py: 3,
-          px: 0,
+          width: "1920px", // กำหนดความกว้างคงที่
+          height: "1080px", // กำหนดความสูงคงที่
+          padding: "16px", // กำหนดขอบเขตแน่นอนแทนการใช้ py และ px ที่เป็น responsive
           display: "flex",
           flexDirection: "column",
+          margin: "0",
+          boxSizing: "border-box",
         }}
       >
-        {/* ส่วนหัว - ทำให้กระชับขึ้น */}
+        {/* ส่วนหัว */}
         <Paper
-          elevation={4}
+          elevation={3}
           sx={{
-            p: 3,
-            mb: 3,
-            borderRadius: 2,
+            padding: "16px", // กำหนดขอบเขตแน่นอน
+            marginBottom: "16px", // กำหนดระยะห่างแน่นอน
+            borderRadius: "12px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            background: "linear-gradient(135deg, #2193b0, #6dd5ed)",
-            height: "9vh",
-            minHeight: "50px",
+            background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
+            height: "100px", // กำหนดความสูงคงที่
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Avatar
               src="/assets/logo.png"
               alt="Logo"
-              sx={{ width: 100, height: 100, mr: 3 }}
+              sx={{
+                width: 60,
+                height: 60,
+                marginRight: "16px", // กำหนดระยะห่างแน่นอน
+                border: "2px solid white",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+              }}
             />
-            <Typography
-              variant="h4"
-              sx={{ color: "white", fontWeight: "bold" }}
-            >
-              เลือกตั้งนายกเทศมนตรีเมืองกระทุ่มแบน
-            </Typography>
+            <Box>
+              <Typography
+                variant="h4"
+                sx={{
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "2rem", // กำหนดขนาดตัวอักษรคงที่
+                  textShadow: "1px 1px 2px rgba(0,0,0,0.3)",
+                }}
+              >
+                เลือกตั้งนายกเทศมนตรีเมืองกระทุ่มแบน
+              </Typography>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  color: "rgba(255,255,255,0.9)",
+                  marginTop: "4px", // กำหนดระยะห่างแน่นอน
+                }}
+              >
+                รวมคะแนนทั้งสิ้น {totalVotes.toLocaleString()} คะแนน
+              </Typography>
+            </Box>
           </Box>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              bgcolor: "rgba(255, 255, 255, 0.2)",
-              p: 0.5,
-              px: 1,
-              borderRadius: 1,
-            }}
-          >
-            <AccessTimeIcon
-              sx={{ color: "black", mr: 1, fontSize: "1.5rem" }}
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Chip
+              icon={<HowToVoteIcon />}
+              label={`${processedPollingStations}/${totalPollingStations} หน่วย`}
+              color="info"
+              variant="filled"
+              sx={{
+                bgcolor: "rgba(255,255,255,0.15)",
+                color: "white",
+                fontSize: "0.9rem",
+                fontWeight: "medium",
+              }}
             />
-            <Typography
-              variant="h5"
-              sx={{ color: "#02223d", fontWeight: "bold" }}
-            >
-              อัปเดตล่าสุด: {formatTime(currentTime)}
-            </Typography>
           </Box>
         </Paper>
 
-        {/* เนื้อหาหลัก - ให้ใช้พื้นที่ที่เหลือทั้งหมด */}
+        {/* เนื้อหาหลัก */}
         <Box
           sx={{
-            flexGrow: 2,
-            height: "100vh",
+            flex: 1,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            flexDirection: "column",
+            height: "calc(1080px - 132px - 60px)", // คำนวณความสูงจากขนาดหน้าจอ ลบส่วนหัวและส่วนท้าย
           }}
         >
-          <Grid container spacing={1} sx={{ height: "100%" }}>
-            {/* คอลัมน์กลาง - ผู้สมัคร */}
-            <Grid item xs={12} md={7} sx={{ height: "100%" }}>
-              <Paper
-                elevation={2}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
+          <Paper
+            elevation={2}
+            sx={{
+              padding: "24px", // กำหนดขอบเขตแน่นอน
+              borderRadius: "12px",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* แถบชื่อส่วน */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "24px", // กำหนดระยะห่างแน่นอน
+                paddingBottom: "8px", // กำหนดขอบเขตแน่นอน
+                borderBottom: "1px solid rgba(0,0,0,0.08)",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <PersonIcon sx={{ color: theme.palette.primary.main, marginRight: "8px" }} />
                 <Typography
                   variant="h6"
                   sx={{
-                    mb: 1.5,
                     fontWeight: "bold",
                     color: theme.palette.primary.main,
                   }}
                 >
                   ผลการเลือกตั้งรายบุคคล
                 </Typography>
+              </Box>
 
-                {/* แสดงผู้สมัครจำนวน 4 คนเป็น grid 2x2 */}
-                <Grid container spacing={10} sx={{ mb: 5, flexGrow: 1 }}>
-                  {candidates.map((candidate) => (
-                    <Grid item xs={12} sm={10} key={candidate.id}>
-                      <Card
-                        elevation={3}
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                          height: "100%",
-                          minHeight: "150px",
-                          borderLeft: `10px solid ${candidate.color}`,
-                          borderRadius: 3,
-                          transition: "transform 0.2s",
-                          "&:hover": {
-                            transform: "translateY(-4px)",
-                            boxShadow: 6,
-                          },
-                        }}
-                      >
-                        <CardContent
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <AccessTimeIcon
+                  sx={{ color: "grey.600", marginRight: "4px", fontSize: "1rem" }}
+                />
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  fontWeight={"bold"}
+                >
+                  เวลาปัจจุบัน: {formatTime(currentTime)}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* แสดงผู้สมัคร */}
+            <Box sx={{ marginBottom: "24px" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: "24px",
+                  height: "300px", // กำหนดความสูงคงที่สำหรับการ์ดผู้สมัคร
+                }}
+              >
+                {candidates.map((candidate, index) => (
+                  <Box
+                    key={candidate.id}
+                    sx={{
+                      flex: 1,
+                      maxWidth: "calc((100% - 48px) / 3)", // คำนวณความกว้างเพื่อให้พอดี 3 การ์ด
+                    }}
+                  >
+                    <Card
+                      elevation={3}
+                      sx={{
+                        display: "flex",
+                        height: "100%",
+                        borderRadius: "12px",
+                        position: "relative",
+                        overflow: "hidden",
+                        ...(index === 0 && {
+                          border: "2px solid gold",
+                          boxShadow: "0 4px 20px rgba(255, 215, 0, 0.3)",
+                        }),
+                      }}
+                    >
+                      {index === 0 && (
+                        <Box
                           sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            bgcolor: "rgba(255, 215, 0, 0.5)",
+                            color: "black",
+                            padding: "4px 8px",
+                            fontWeight: "bold",
+                            zIndex: 2,
+                            borderBottomLeftRadius: "8px",
+                            fontSize: "0.875rem",
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                           }}
                         >
+                          คะแนนนำ
+                        </Box>
+                      )}
+
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          bottom: 0,
+                          width: "8px",
+                          bgcolor: candidate.color,
+                        }}
+                      />
+
+                      <CardContent sx={{ width: "100%", padding: "16px" }}>
+                        <Box sx={{ display: "flex", marginBottom: "16px" }}>
                           <Avatar
                             src={candidate.image}
                             alt={candidate.name}
-                            sx={{ width: 220, height: 300 }}
+                            sx={{
+                              width: 120,
+                              height: 150,
+                              borderRadius: "8px",
+                              marginRight: "16px",
+                              boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                            }}
                             variant="rounded"
                           />
-                          <Box
-                            sx={{
-                              ml: 2,
-                              flex: 1,
-                              display: "flex",
-                              flexDirection: "column",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <Box>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  mb: 1,
-                                }}
-                              >
-                                <Avatar
-                                  sx={{
-                                    bgcolor: candidate.color,
-                                    width: 50,
-                                    height: 50,
-                                    fontSize: "1.5rem",
-                                    mr: 1,
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  {candidate.id}
-                                </Avatar>
-                                <Typography
-                                  variant="h6"
-                                  sx={{
-                                    fontWeight: "bold",
-                                    fontSize: "1.4rem",
-                                    p: 3,
-                                  }}
-                                >
-                                  {candidate.name}
-                                </Typography>
-                              </Box>
 
-                              <Typography
-                                variant="h4"
+                          <Box sx={{ flex: 1 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                marginBottom: "8px",
+                              }}
+                            >
+                              <Avatar
                                 sx={{
-                                  mb: 1.5,
-                                  fontSize: "1.7rem",
-                                  fontWeight: "medium",
+                                  bgcolor: candidate.color,
+                                  width: 30,
+                                  height: 30,
+                                  fontSize: "1rem",
+                                  marginRight: "8px",
+                                  fontWeight: "bold",
                                 }}
                               >
-                                {candidate.votes.toLocaleString()} คะแนน
+                                {candidate.id}
+                              </Avatar>
+                              <Typography
+                                variant="h6"
+                                sx={{
+                                  fontWeight: "bold",
+                                  fontSize: "1.1rem",
+                                }}
+                              >
+                                {candidate.name}
                               </Typography>
                             </Box>
 
-                            <Box sx={{ width: "100%" }}>
-                              <Box
-                                sx={{
-                                  width: "100%",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  mb: 0.5,
-                                }}
-                              >
-                                <Box sx={{ width: "100%", mr: 1 }}>
-                                  <LinearProgress
-                                    variant="determinate"
-                                    value={candidate.percentage}
-                                    sx={{
-                                      height: 25,
-                                      borderRadius: 4,
-                                      bgcolor: "rgba(0,0,0,0.1)",
-                                      "& .MuiLinearProgress-bar": {
-                                        bgcolor: candidate.color,
-                                      },
-                                    }}
-                                  />
-                                </Box>
-                                <Typography
-                                  variant="body1"
-                                  fontWeight="bold"
-                                  sx={{
-                                    fontSize: "1.4rem",
-                                    minWidth: "54px",
-                                    textAlign: "right",
-                                  }}
-                                >
-                                  {candidate.percentage}%
-                                </Typography>
-                              </Box>
-                            </Box>
+                            <Typography
+                              variant="h5"
+                              sx={{
+                                fontWeight: "600",
+                                color: candidate.color,
+                                marginTop: "8px",
+                              }}
+                            >
+                              {candidate.votes.toLocaleString()} คะแนน
+                            </Typography>
                           </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                        </Box>
 
-                {/* ตารางหน่วยการเลือกตั้ง */}
-                <Paper
-                  elevation={2}
+                        <Box sx={{ marginTop: "16px" }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            <Typography variant="body2" color="text.secondary">
+                              คะแนนเสียง
+                            </Typography>
+                            <Typography
+                              variant="body1"
+                              fontWeight="bold"
+                              sx={{ fontSize: "1.2rem" }}
+                            >
+                              {candidate.percentage}%
+                            </Typography>
+                          </Box>
+
+                          <LinearProgress
+                            variant="determinate"
+                            value={parseFloat(candidate.percentage)}
+                            sx={{
+                              height: 12,
+                              borderRadius: 6,
+                              bgcolor: "rgba(0,0,0,0.05)",
+                              "& .MuiLinearProgress-bar": {
+                                bgcolor: candidate.color,
+                                borderRadius: 6,
+                              },
+                            }}
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+
+            {/* แสดงหน่วยเลือกตั้ง */}
+            <Paper
+              elevation={1}
+              sx={{
+                padding: "16px", // กำหนดขอบเขตแน่นอน
+                bgcolor: "white",
+                borderRadius: "8px",
+                marginTop: "auto",
+                border: "1px solid rgba(0,0,0,0.05)",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+                <FlagIcon sx={{ color: theme.palette.secondary.main, marginRight: "8px" }} />
+                <Typography
+                  variant="subtitle1"
                   sx={{
-                    p: 2,
-                    bgcolor: "background.default",
-                    borderRadius: 2,
-                    mt: "auto",
+                    fontWeight: "bold",
+                    color: theme.palette.secondary.main,
                   }}
                 >
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      mb: 1,
-                      fontWeight: "bold",
-                      color: theme.palette.secondary.main,
-                    }}
+                  สถานะหน่วยการเลือกตั้ง ({processedPollingStations}/
+                  {totalPollingStations})
+                </Typography>
+              </Box>
+
+              {/* แสดงตารางหน่วยเลือกตั้ง */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
+                  gap: "12px",
+                }}
+              >
+                {Array.from(
+                  { length: totalPollingStations },
+                  (_, i) => i + 1
+                ).map((num) => (
+                  <Tooltip
+                    key={num}
+                    title={
+                      num <= processedPollingStations
+                        ? "นับเสร็จสิ้น"
+                        : "ยังไม่ได้นับ"
+                    }
+                    arrow
                   >
-                    จำนวนหน่วยการเลือกตั้ง
-                  </Typography>
-                  {/* แสดงตารางหน่วยเลือกตั้ง 18 หน่วย เป็นแถวเดียว */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      justifyContent: "center",
-                      gap: 1,
-                    }}
-                  >
-                    {Array.from({ length: 18 }, (_, i) => i + 1).map((num) => (
-                      <Box
-                        key={num}
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          borderRadius: 1,
-                          bgcolor: num <= 4 ? "primary.main" : "grey.300",
-                          color: num <= 4 ? "white" : "text.secondary",
-                          fontWeight: "bold",
-                          fontSize: "1rem",
-                          boxShadow: num <= 4 ? 2 : 0,
-                        }}
-                      >
-                        {num}
-                      </Box>
-                    ))}
-                  </Box>
-                </Paper>
-                <Paper>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "center", // จัดกลางแนวนอน
-                      alignItems: "center", // จัดกลางแนวตั้ง
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle1"
+                    <Box
                       sx={{
+                        width: 48,
+                        height: 48,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        borderRadius: "10px",
+                        bgcolor:
+                          num <= processedPollingStations
+                            ? "rgba(25, 118, 210, 0.1)"
+                            : "rgba(0, 0, 0, 0.05)",
+                        border:
+                          num <= processedPollingStations
+                            ? "2px solid #1976D2"
+                            : "1px solid rgba(0,0,0,0.1)",
+                        color:
+                          num <= processedPollingStations
+                            ? "#1976D2"
+                            : "text.secondary",
                         fontWeight: "bold",
-                        color: "red", // สีที่แน่ใจว่าใช้งานได้
-                        fontSize: "1.2rem",
-                        textDecoration: "underline",
+                        fontSize: "1.1rem",
+                        boxShadow:
+                          num <= processedPollingStations
+                            ? "0 2px 8px rgba(25, 118, 210, 0.2)"
+                            : "none",
                       }}
                     >
-                      "คะแนนผลการเลือกตั้งอย่างไม่เป็นทางการ"
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Paper>
-            </Grid>
-
-            {/* คอลัมน์ขวา - สรุปผลการเลือกตั้งและสถิติเพิ่มเติม (รวมกัน) */}
-          </Grid>
+                      {num}
+                    </Box>
+                  </Tooltip>
+                ))}
+              </Box>
+            </Paper>
+          </Paper>
         </Box>
+
+        {/* ข้อความการแจ้งเตือน */}
+        <Paper
+          elevation={2}
+          sx={{
+            padding: "12px", // กำหนดขอบเขตแน่นอน
+            marginTop: "16px", // กำหนดระยะห่างแน่นอน
+            borderRadius: "8px",
+            bgcolor: "rgba(255, 0, 0, 0.05)",
+            border: "1px solid rgba(255, 0, 0, 0.2)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "60px", // กำหนดความสูงคงที่
+          }}
+        >
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: "bold",
+              color: "error.main",
+              fontSize: "1.1rem",
+              textAlign: "center",
+            }}
+          >
+            * คะแนนผลการเลือกตั้งอย่างไม่เป็นทางการ *
+          </Typography>
+        </Paper>
       </Container>
     </Box>
   );

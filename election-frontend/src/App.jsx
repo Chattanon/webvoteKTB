@@ -9,6 +9,7 @@ import LoginPage from "../src/Login"; // นำเข้าหน้า Login
 import "./mediaQuery.css";
 import ElectionPageMem from "./municipal_Mem_page/ElectionPageMem";
 import ElectionResultsPagegraph from "./mayor_page/ElectionResultsPagegraph";
+import ElectionInfo from "./ElectionInfo ";
 
 const ProtectedRoute = ({ children }) => {
   return localStorage.getItem("auth") === "true" ? children : <Navigate to="/login" />;
@@ -20,6 +21,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><ElectionPageMain /></ProtectedRoute>} /> {/* หน้าเลือกตั้งหลัก */}
+        <Route path="/info" element={<ProtectedRoute><ElectionInfo /></ProtectedRoute>} /> {/* หน้าเลือกตั้งหลัก */}
         <Route path="/election-president" element={<ProtectedRoute><ElectionPage /></ProtectedRoute>} /> {/* หน้าของนายกเทศมนตรี */}
         <Route path="/election-council" element={<ProtectedRoute><ElectionPageMem /></ProtectedRoute>} /> {/* หน้าของสมาชิกสภาเทศบาล */}
         <Route path="/units" element={<ProtectedRoute><ElectionUnits /></ProtectedRoute>} />
