@@ -1,633 +1,638 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
   Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   TextField,
   Button,
-  List,
-  ListItem,
-  ListItemText,
-  Paper,
-  Divider,
   Grid,
+  Paper,
   Card,
   CardContent,
   Alert,
   Snackbar,
-  IconButton,
   CircularProgress,
-  Chip,
-  Tooltip,
-  Avatar
-} from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import HowToVoteIcon from "@mui/icons-material/HowToVote";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import SaveIcon from "@mui/icons-material/Save";
-import CancelIcon from "@mui/icons-material/Cancel";
-import BlockIcon from "@mui/icons-material/Block";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import ShowChartIcon from "@mui/icons-material/ShowChart";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { getFullAPI } from "../api/apiConfig";
+  Autocomplete,
+  Divider
+} from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import SummarizeIcon from '@mui/icons-material/Summarize';
+import {getFullAPI} from '../api/apiConfig';
 
-// Custom theme with more vibrant colors
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#2196f3", // More vibrant blue
-      light: "#bbdefb",
-      dark: "#1565c0",
-    },
-    secondary: {
-      main: "#ff4081", // Vibrant pink
-      light: "#ff80ab",
-      dark: "#c51162",
-    },
-    info: {
-      main: "#00bcd4", // Cyan
-    },
-    success: {
-      main: "#4caf50", // Green
-    },
-    warning: {
-      main: "#ff9800", // Orange
-    },
-    error: {
-      main: "#f44336", // Red
-    },
-    background: {
-      default: "#f5f5f5",
-      paper: "#ffffff",
-    },
-  },
-  typography: {
-    fontFamily: "'Kanit', 'Roboto', 'Arial', sans-serif",
-    h4: {
-      fontWeight: 600,
-    },
-    h5: {
-      fontWeight: 500,
-    },
-    button: {
-      fontWeight: 500,
-      textTransform: "none",
-    },
-  },
-  shape: {
-    borderRadius: 12,
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-          transition: "all 0.3s",
-          "&:hover": {
-            transform: "translateY(-2px)",
-            boxShadow: "0 6px 12px rgba(0,0,0,0.15)",
-          },
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-          overflow: "visible",
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          fontWeight: 500,
-        },
-      },
-    },
-  },
-});
+const MayorVotesForm = () => {
+  // State for form values
+  const [formData, setFormData] = useState({
+    candidate_id: '',
+    zone_id: '',
+    unit_id: '',
+    votes: ''
+  });
 
-const ElectionResults = () => {
-  // Navigation
-  const navigate = useNavigate();
+  // State for form validation
+  const [errors, setErrors] = useState({
+    candidate_id: false,
+    zone_id: false,
+    unit_id: false,
+    votes: false
+  });
 
-  // State variables
-  const [selectedZone, setSelectedZone] = useState("");
-  const [selectedCandidate, setSelectedCandidate] = useState("");
-  const [votes, setVotes] = useState("");
-  const [voidBallots, setVoidBallots] = useState("");
-  const [noVoteBallots, setNoVoteBallots] = useState("");
-  const [submittedResults, setSubmittedResults] = useState([]);
+  // State for snackbar
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: "",
-    severity: "success"
-  });
-  const [loading, setLoading] = useState(false);
-  const [summaryData, setSummaryData] = useState({
-    totalVotes: 0,
-    totalVoidBallots: 0,
-    totalNoVoteBallots: 0
+    message: '',
+    severity: 'success'
   });
 
-  // Static data (could be fetched from API)
-  const zones = [
-    { id: 1, name: "เขตที่ 1" },
-    { id: 2, name: "เขตที่ 2" },
-    { id: 3, name: "เขตที่ 3" },
-  ];
+  // State for loading indicator
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const candidates = [
-    { id: 1, name: "ผู้สมัคร 1", color: "#2196f3" },
-    { id: 2, name: "ผู้สมัคร 2", color: "#f44336" },
-    { id: 3, name: "ผู้สมัคร 3", color: "#4caf50" },
-  ];
+  // State for data from API
+  const [candidates, setCandidates] = useState([]);
+  const [zones, setZones] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [filteredUnits, setFilteredUnits] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Additional states for API error tracking
+  const [apiErrors, setApiErrors] = useState({
+    candidates: false,
+    zones: false,
+    units: false
+  });
 
-  // Fetch existing results on component mount
+  // Fetch data from API on component mount
   useEffect(() => {
-    fetchResults();
-  }, []);
+    const fetchData = async () => {
+      setIsLoading(true);
+      
+      // Reset API errors
+      setApiErrors({
+        candidates: false,
+        zones: false,
+        units: false
+      });
+      
+      try {
+        // Fetch candidates
+        console.log("Fetching candidates from:", getFullAPI("get_candidates_api.php"));
+        const candidatesResponse = await fetch(getFullAPI("get_candidates_api.php"));
+        const candidatesData = await candidatesResponse.json();
+        console.log("Candidates Response:", candidatesData);
 
-  // Handle navigation back
-  const handleBack = () => {
-    navigate("/election-president");
-  };
+        if (candidatesData.success && Array.isArray(candidatesData.results)) {
+          // ปรับแก้ให้ใช้ .results จาก API
+          setCandidates(candidatesData.results);
+        } else {
+          console.error("Invalid candidates data format:", candidatesData);
+          setApiErrors(prev => ({ ...prev, candidates: true }));
+          setCandidates([]);
+        }
 
-  // Fetch results from API
-  const fetchResults = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(getFullAPI("get_candidates_api.php"));
-
-      if (response.data.success) {
-        setSubmittedResults(response.data.results);
+        // Fetch zones
+        console.log("Fetching zones from:", getFullAPI("get_zones_api.php"));
+        const zonesResponse = await fetch(getFullAPI("get_zones_api.php"));
+        const zonesData = await zonesResponse.json();
+        console.log("Zones Response:", zonesData);
         
-        // Calculate summary data
-        const summary = response.data.results.reduce((acc, result) => {
-          acc.totalVotes += parseInt(result.votes || 0);
-          acc.totalVoidBallots += parseInt(result.void_ballots || 0);
-          acc.totalNoVoteBallots += parseInt(result.no_vote_ballots || 0);
-          return acc;
-        }, {
-          totalVotes: 0,
-          totalVoidBallots: 0,
-          totalNoVoteBallots: 0
-        });
+        if (zonesData.success && Array.isArray(zonesData.zones)) {
+          // ปรับแก้ให้ใช้ .zones จาก API
+          setZones(zonesData.zones);
+        } else {
+          console.error("Invalid zones data format:", zonesData);
+          setApiErrors(prev => ({ ...prev, zones: true }));
+          setZones([]);
+        }
+
+        // Fetch units
+        console.log("Fetching units from:", getFullAPI("get_units_api.php"));
+        const unitsResponse = await fetch(getFullAPI("get_units_api.php"));
+        const unitsData = await unitsResponse.json();
+        console.log("Units Response:", unitsData);
         
-        setSummaryData(summary);
-      } else {
+        if (unitsData.success && Array.isArray(unitsData.units)) {
+          // ปรับแก้ให้ใช้ .units จาก API
+          setUnits(unitsData.units);
+          setFilteredUnits(unitsData.units);
+        } else {
+          console.error("Invalid units data format:", unitsData);
+          setApiErrors(prev => ({ ...prev, units: true }));
+          setUnits([]);
+          setFilteredUnits([]);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
         setSnackbar({
           open: true,
-          message: "ไม่สามารถดึงข้อมูลได้: " + response.data.message,
-          severity: "error"
+          message: 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง: ' + error.message,
+          severity: 'error'
         });
+        
+        // Set all API errors to true
+        setApiErrors({
+          candidates: true,
+          zones: true,
+          units: true
+        });
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์",
-        severity: "error"
-      });
-    } finally {
-      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  // Filter units based on selected zone
+  useEffect(() => {
+    if (formData.zone_id) {
+      // If zone is selected, filter units for that zone
+      setFilteredUnits(units.filter(unit => unit.zone_id === formData.zone_id));
+      
+      // If current unit is not in the filtered list, clear it
+      if (formData.unit_id && !units.find(unit => 
+        unit.id === formData.unit_id && unit.zone_id === formData.zone_id
+      )) {
+        setFormData(prev => ({
+          ...prev,
+          unit_id: ''
+        }));
+      }
+    } else {
+      // If no zone selected, show all units
+      setFilteredUnits(units);
     }
+  }, [formData.zone_id, units]);
+
+  // Handle input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+    
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: false
+      });
+    }
+  };
+
+  // Handle dropdown changes (for Autocomplete components)
+  const handleAutocompleteChange = (name, value) => {
+    setFormData({
+      ...formData,
+      [name]: value || ''
+    });
+    
+    // Clear error
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: false
+      });
+    }
+  };
+
+  // Form validation
+  const validateForm = () => {
+    const newErrors = {
+      candidate_id: !formData.candidate_id,
+      zone_id: !formData.zone_id,
+      unit_id: !formData.unit_id,
+      votes: !formData.votes || formData.votes < 0 || !Number.isInteger(Number(formData.votes))
+    };
+    
+    setErrors(newErrors);
+    
+    // Return true if no errors (all values are false)
+    return !Object.values(newErrors).some(error => error);
   };
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate input
-    if (!selectedZone || !selectedCandidate || votes === "") {
-      setSnackbar({
-        open: true,
-        message: "กรุณากรอกข้อมูลให้ครบในช่องที่จำเป็น",
-        severity: "error"
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await axios.post(getFullAPI("insert_vote_mayor_api.php"), {
-        zone_id: parseInt(selectedZone),
-        candidate_id: parseInt(selectedCandidate),
-        votes: parseInt(votes),
-        void_ballots: voidBallots ? parseInt(voidBallots) : 0,
-        no_vote_ballots: noVoteBallots ? parseInt(noVoteBallots) : 0
-      });
-
-      if (response.data.success) {
-        setSnackbar({
-          open: true,
-          message: "บันทึกข้อมูลสำเร็จ",
-          severity: "success"
+    if (validateForm()) {
+      setIsSubmitting(true);
+      
+      try {
+        // Add current timestamp
+        const submissionData = {
+          ...formData,
+          created_at: new Date().toISOString()
+        };
+        
+        // Log the data being sent
+        console.log("Submitting data:", submissionData);
+        
+        // Send data to API using the correct endpoint
+        const response = await fetch(getFullAPI("insert_vote_mayor_api.php"), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submissionData)
         });
         
-        // Reset form
-        setSelectedZone("");
-        setSelectedCandidate("");
-        setVotes("");
-        setVoidBallots("");
-        setNoVoteBallots("");
+        const result = await response.json();
+        console.log("Submission result:", result);
         
-        // Refresh results
-        fetchResults();
-      } else {
+        if (result.success) {
+          // Show success message
+          setSnackbar({
+            open: true,
+            message: result.message || 'บันทึกข้อมูลสำเร็จ',
+            severity: 'success'
+          });
+          
+          // Reset form
+          setFormData({
+            candidate_id: '',
+            zone_id: '',
+            unit_id: '',
+            votes: ''
+          });
+        } else {
+          // Show error message
+          setSnackbar({
+            open: true,
+            message: result.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
+            severity: 'error'
+          });
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
         setSnackbar({
           open: true,
-          message: "ไม่สามารถบันทึกข้อมูล: " + response.data.message,
-          severity: "error"
+          message: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์: ' + error.message,
+          severity: 'error'
         });
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (error) {
+    } else {
+      // Show validation error message
       setSnackbar({
         open: true,
-        message: "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์",
-        severity: "error"
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง',
+        severity: 'error'
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Get candidate name by ID
-  const getCandidateName = (id) => {
-    const candidate = candidates.find(c => c.id === parseInt(id));
-    return candidate ? candidate.name : `ผู้สมัครหมายเลข ${id}`;
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false
+    });
   };
 
-  // Get candidate color by ID
-  const getCandidateColor = (id) => {
-    const candidate = candidates.find(c => c.id === parseInt(id));
-    return candidate ? candidate.color : "#9e9e9e";
+  // Get current time formatted for Thai locale
+  const getCurrentTime = () => {
+    return new Date().toLocaleString('th-TH', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
-  // Get zone name by ID
-  const getZoneName = (id) => {
-    const zone = zones.find(z => z.id === parseInt(id));
-    return zone ? zone.name : `เขตที่ ${id}`;
+  // Find candidate by ID
+  const getCandidate = (id) => {
+    return candidates.find(c => c.id === id) || null;
+  };
+
+  // Find zone by ID
+  const getZone = (id) => {
+    return zones.find(z => z.id === id) || null;
+  };
+
+  // Find unit by ID
+  const getUnit = (id) => {
+    return units.find(u => u.id === id) || null;
+  };
+
+  // Function to check if we have data
+  const hasData = () => {
+    return candidates.length > 0 && zones.length > 0 && units.length > 0;
+  };
+
+  // Function to retry loading data
+  const handleRetryLoad = () => {
+    // Rerun the useEffect by forcing a component update
+    setIsLoading(true);
+    setTimeout(() => {
+      // This will trigger the useEffect again
+      setCandidates([]);
+      setZones([]);
+      setUnits([]);
+      setFilteredUnits([]);
+    }, 100);
+  };
+
+  // Function to check if any selection has been made
+  const hasSelection = () => {
+    return formData.candidate_id || formData.zone_id || formData.unit_id || formData.votes;
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <Box sx={{ 
-        minHeight: "100vh", 
-        background: "linear-gradient(to bottom right, #e3f2fd, #ffffff)",
-        py: 4
-      }}>
-        <Container maxWidth="lg">
-          {/* Header Section */}
-          <Box sx={{ mb: 4 }}>
-            <Button
-              variant="contained"
-              startIcon={<ArrowBackIcon />}
-              sx={{ mb: 3 }}
-              onClick={handleBack}
-              color="info"
-            >
-              กลับหน้าหลัก
-            </Button>
-            
-            <Paper 
-              elevation={3} 
-              sx={{ 
-                p: 3, 
-                mb: 4, 
-                background: "linear-gradient(to right, #2196f3, #1976d2)",
-                borderRadius: 3
-              }}
-            >
-              <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: "white" }}>
-                <HowToVoteIcon sx={{ fontSize: 40, mr: 1, verticalAlign: "middle" }} />
-                ระบบบันทึกผลการเลือกตั้ง
-              </Typography>
-              <Typography variant="subtitle1" align="center" sx={{ color: "white", opacity: 0.9 }}>
-                บันทึกและตรวจสอบผลคะแนนการเลือกตั้งแต่ละเขต
-              </Typography>
-            </Paper>
-          </Box>
-
-          <Grid container spacing={4}>
-            {/* Form Section */}
-            <Grid item xs={12} md={6}>
-              <Card elevation={3} sx={{ borderRadius: 3, position: "relative", overflow: "visible" }}>
-                <Box 
-                  sx={{ 
-                    position: "absolute", 
-                    top: -20, 
-                    left: 32, 
-                    backgroundColor: theme.palette.primary.main,
-                    color: "white",
-                    borderRadius: 2,
-                    px: 3,
-                    py: 1,
-                    boxShadow: "0 4px 12px rgba(33, 150, 243, 0.3)"
-                  }}
-                >
-                  <Typography variant="h6" component="h2" gutterBottom sx={{ m: 0 }}>
-                    <DashboardIcon sx={{ fontSize: 20, mr: 1, verticalAlign: "middle" }} />
-                    บันทึกผลคะแนน
-                  </Typography>
-                </Box>
-                <CardContent sx={{ mt: 3, pt: 3 }}>
-                  <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel id="zone-select-label">เลือกเขตเลือกตั้ง</InputLabel>
-                      <Select
-                        labelId="zone-select-label"
-                        value={selectedZone}
-                        label="เลือกเขตเลือกตั้ง"
-                        onChange={(e) => setSelectedZone(e.target.value)}
-                        sx={{ borderRadius: 2 }}
-                      >
-                        <MenuItem value=""><em>-- กรุณาเลือก --</em></MenuItem>
-                        {zones.map((zone) => (
-                          <MenuItem key={zone.id} value={zone.id}>
-                            {zone.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel id="candidate-select-label">เลือกผู้สมัคร</InputLabel>
-                      <Select
-                        labelId="candidate-select-label"
-                        value={selectedCandidate}
-                        label="เลือกผู้สมัคร"
-                        onChange={(e) => setSelectedCandidate(e.target.value)}
-                        sx={{ borderRadius: 2 }}
-                        MenuProps={{
-                          PaperProps: {
-                            sx: { maxHeight: 200 }
-                          }
-                        }}
-                      >
-                        <MenuItem value=""><em>-- กรุณาเลือก --</em></MenuItem>
-                        {candidates.map((candidate) => (
-                          <MenuItem key={candidate.id} value={candidate.id}>
-                            <Box sx={{ display: "flex", alignItems: "center" }}>
-                              <Avatar 
-                                sx={{ 
-                                  width: 24, 
-                                  height: 24, 
-                                  mr: 1, 
-                                  bgcolor: candidate.color 
-                                }}
-                              >
-                                {candidate.id}
-                              </Avatar>
-                              {candidate.name}
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <Box sx={{ background: "#f5f5f5", p: 2, borderRadius: 2, mt: 2, mb: 2 }}>
-                      <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500, color: "#424242" }}>
-                        ผลคะแนน
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                          <TextField
-                            fullWidth
-                            label="จำนวนคะแนน"
-                            type="number"
-                            value={votes}
-                            onChange={(e) => setVotes(e.target.value)}
-                            InputProps={{ 
-                              inputProps: { min: 0 },
-                              startAdornment: <ShowChartIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                            }}
-                            required
-                            sx={{ 
-                              backgroundColor: "white", 
-                              borderRadius: 2,
-                              "& .MuiOutlinedInput-root": {
-                                borderRadius: 2
-                              }
-                            }}
-                          />
-                        </Grid>
-                        <Grid item xs={6}>
-                          <TextField
-                            fullWidth
-                            label="บัตรเสีย"
-                            type="number"
-                            value={voidBallots}
-                            onChange={(e) => setVoidBallots(e.target.value)}
-                            InputProps={{ 
-                              inputProps: { min: 0 },
-                              startAdornment: <CancelIcon sx={{ mr: 1, color: theme.palette.error.main }} />
-                            }}
-                            sx={{ 
-                              backgroundColor: "white", 
-                              borderRadius: 2,
-                              "& .MuiOutlinedInput-root": {
-                                borderRadius: 2
-                              }
-                            }}
-                          />
-                        </Grid>
-                        <Grid item xs={6}>
-                          <TextField
-                            fullWidth
-                            label="บัตรไม่ประสงค์ลงคะแนน"
-                            type="number"
-                            value={noVoteBallots}
-                            onChange={(e) => setNoVoteBallots(e.target.value)}
-                            InputProps={{ 
-                              inputProps: { min: 0 },
-                              startAdornment: <BlockIcon sx={{ mr: 1, color: theme.palette.warning.main }} />
-                            }}
-                            sx={{ 
-                              backgroundColor: "white", 
-                              borderRadius: 2,
-                              "& .MuiOutlinedInput-root": {
-                                borderRadius: 2
-                              }
-                            }}
-                          />
-                        </Grid>
-                      </Grid>
-                    </Box>
-
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      size="large"
-                      startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                      sx={{ mt: 2, py: 1.5 }}
-                      disabled={loading}
-                    >
-                      {loading ? "กำลังบันทึก..." : "บันทึกผลคะแนน"}
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Results Section */}
-            <Grid item xs={12} md={6}>
-              <Card elevation={3} sx={{ borderRadius: 3, position: "relative", overflow: "visible" }}>
-                <Box 
-                  sx={{ 
-                    position: "absolute", 
-                    top: -20, 
-                    left: 32, 
-                    backgroundColor: theme.palette.secondary.main,
-                    color: "white",
-                    borderRadius: 2,
-                    px: 3,
-                    py: 1,
-                    boxShadow: "0 4px 12px rgba(244, 67, 54, 0.3)"
-                  }}
-                >
-                  <Typography variant="h6" component="h2" gutterBottom sx={{ m: 0 }}>
-                    <AssessmentIcon sx={{ fontSize: 20, mr: 1, verticalAlign: "middle" }} />
-                    ผลคะแนนที่บันทึกแล้ว
-                  </Typography>
-                </Box>
-                <CardContent sx={{ mt: 3, pt: 3 }}>
-                  {loading ? (
-                    <Box sx={{ textAlign: 'center', py: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <CircularProgress color="secondary" />
-                      <Typography sx={{ mt: 2 }}>กำลังโหลดข้อมูล...</Typography>
-                    </Box>
-                  ) : submittedResults.length === 0 ? (
-                    <Alert 
-                      severity="info" 
+    <Container maxWidth="md">
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3, 
+          mb: 4, 
+          mt: 4,
+          background: "linear-gradient(to right, #2196f3, #1976d2)",
+          borderRadius: 3
+        }}
+      >
+        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: "white" }}>
+          <HowToVoteIcon sx={{ fontSize: 40, mr: 1, verticalAlign: "middle" }} />
+          บันทึกผลคะแนนนายกเทศมนตรี
+        </Typography>
+        <Typography variant="subtitle1" align="center" sx={{ color: "white", opacity: 0.9 }}>
+          กรอกข้อมูลคะแนนเสียงเลือกตั้งในแต่ละหน่วยและเขตเลือกตั้ง
+        </Typography>
+      </Paper>
+      
+      <Card elevation={3} sx={{ borderRadius: 2, mb: 4 }}>
+        <CardContent>
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : !hasData() ? (
+            <Box sx={{ p: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }}>
+                <Typography variant="h6" component="div" gutterBottom>
+                  ไม่สามารถโหลดข้อมูลได้
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  พบปัญหาในการโหลดข้อมูล:
+                  <ul>
+                    {apiErrors.candidates && <li>ไม่สามารถโหลดข้อมูลผู้สมัคร</li>}
+                    {apiErrors.zones && <li>ไม่สามารถโหลดข้อมูลเขตเลือกตั้ง</li>}
+                    {apiErrors.units && <li>ไม่สามารถโหลดข้อมูลหน่วยเลือกตั้ง</li>}
+                  </ul>
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  กรุณาตรวจสอบการเชื่อมต่อเครือข่ายและเซิร์ฟเวอร์ API ของคุณ
+                </Typography>
+              </Alert>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                onClick={handleRetryLoad}
+                fullWidth
+              >
+                ลองใหม่อีกครั้ง
+              </Button>
+            </Box>
+          ) : (
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+              <Grid container spacing={3}>
+                {/* Debug Info - Show data counts */}
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      จำนวนข้อมูลที่โหลดได้: ผู้สมัคร {candidates.length} คน, 
+                      เขตเลือกตั้ง {zones.length} เขต, 
+                      หน่วยเลือกตั้ง {units.length} หน่วย
+                    </Typography>
+                  </Alert>
+                </Grid>
+                
+                {/* Candidate Selection - Using Autocomplete for better UX */}
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    id="candidate-select"
+                    options={candidates.map(c => c.id)}
+                    getOptionLabel={(option) => {
+                      const candidate = getCandidate(option);
+                      return candidate ? candidate.name : '';
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="ผู้สมัคร"
+                        required
+                        error={errors.candidate_id}
+                        helperText={errors.candidate_id ? "กรุณาเลือกผู้สมัคร" : ""}
+                      />
+                    )}
+                    value={formData.candidate_id || null}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange('candidate_id', newValue);
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+                
+                {/* Zone Selection */}
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    id="zone-select"
+                    options={zones.map(z => z.id)}
+                    getOptionLabel={(option) => {
+                      const zone = getZone(option);
+                      return zone ? zone.zone_name : '';
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="เขตเลือกตั้ง"
+                        required
+                        error={errors.zone_id}
+                        helperText={errors.zone_id ? "กรุณาเลือกเขตเลือกตั้ง" : ""}
+                      />
+                    )}
+                    value={formData.zone_id || null}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange('zone_id', newValue);
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+                
+                {/* Unit Selection - Filtered by selected zone */}
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    id="unit-select"
+                    options={filteredUnits.map(u => u.id)}
+                    getOptionLabel={(option) => {
+                      const unit = getUnit(option);
+                      return unit ? unit.unit_name : '';
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="หน่วยเลือกตั้ง"
+                        required
+                        error={errors.unit_id}
+                        helperText={errors.unit_id ? "กรุณาเลือกหน่วยเลือกตั้ง" : (
+                          formData.zone_id ? "" : "โปรดเลือกเขตเลือกตั้งก่อนเพื่อกรองหน่วยเลือกตั้ง"
+                        )}
+                      />
+                    )}
+                    value={formData.unit_id || null}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange('unit_id', newValue);
+                    }}
+                    disabled={!formData.zone_id}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+                
+                {/* Votes Input */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    id="votes"
+                    name="votes"
+                    label="จำนวนคะแนน"
+                    type="number"
+                    value={formData.votes}
+                    onChange={handleChange}
+                    InputProps={{ inputProps: { min: 0 } }}
+                    error={errors.votes}
+                    helperText={errors.votes ? "กรุณากรอกจำนวนคะแนนเป็นตัวเลขที่มากกว่าหรือเท่ากับ 0" : ""}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+                
+                {/* Summary Section - แสดงข้อมูลที่เลือกไว้ทั้งหมด */}
+                <Grid item xs={12}>
+                  <Paper 
+                    elevation={2} 
+                    sx={{ 
+                      p: 2, 
+                      mb: 3,
+                      backgroundColor: "#f5f5f5",
+                      borderLeft: "4px solid #1976d2"
+                    }}
+                  >
+                    <Typography 
+                      variant="h6" 
+                      component="div" 
+                      gutterBottom 
                       sx={{ 
-                        mt: 2,
-                        borderRadius: 2,
-                        backgroundColor: "#e3f2fd",
-                        color: "#0d47a1"
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        color: "#1976d2"
                       }}
                     >
-                      ยังไม่มีข้อมูลผลคะแนนที่บันทึก
-                    </Alert>
-                  ) : (
-                    <React.Fragment>
-                      {/* Summary data */}
-                      <Box sx={{ mb: 3, p: 2, backgroundColor: "#f5f5f5", borderRadius: 2 }}>
-                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
-                          สรุปผลคะแนนทั้งหมด
+                      <SummarizeIcon sx={{ mr: 1 }} />
+                      สรุปข้อมูลที่จะบันทึก
+                    </Typography>
+                    
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          ผู้สมัคร:
                         </Typography>
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                          <Grid item xs={4}>
-                            <Box sx={{ textAlign: "center", p: 1, bgcolor: "white", borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                              <Typography variant="body2" color="textSecondary">คะแนนรวม</Typography>
-                              <Typography variant="h6" color="primary">{summaryData.totalVotes}</Typography>
-                            </Box>
-                          </Grid>
-                          <Grid item xs={4}>
-                            <Box sx={{ textAlign: "center", p: 1, bgcolor: "white", borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                              <Typography variant="body2" color="textSecondary">บัตรเสีย</Typography>
-                              <Typography variant="h6" color="error">{summaryData.totalVoidBallots}</Typography>
-                            </Box>
-                          </Grid>
-                          <Grid item xs={4}>
-                            <Box sx={{ textAlign: "center", p: 1, bgcolor: "white", borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                              <Typography variant="body2" color="textSecondary">ไม่ประสงค์</Typography>
-                              <Typography variant="h6" color="warning.dark">{summaryData.totalNoVoteBallots}</Typography>
-                            </Box>
-                          </Grid>
-                        </Grid>
-                      </Box>
+                        <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                          {formData.candidate_id ? 
+                            getCandidate(formData.candidate_id)?.name || 'ไม่ระบุ' : 
+                            'ยังไม่ได้เลือก'}
+                        </Typography>
+                      </Grid>
                       
-                      {/* Results list */}
-                      <List sx={{ bgcolor: "#f5f5f5", borderRadius: 2, overflow: "hidden" }}>
-                        {submittedResults.map((result, index) => (
-                          <React.Fragment key={index}>
-                            <ListItem sx={{ px: 2, py: 1.5 }}>
-                              <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
-                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                                  <Chip 
-                                    label={getZoneName(result.zone_id)} 
-                                    size="small" 
-                                    sx={{ bgcolor: "#e1f5fe", color: "#01579b", fontWeight: 500 }}
-                                  />
-                                  <Chip 
-                                    avatar={
-                                      <Avatar sx={{ bgcolor: getCandidateColor(result.candidate_id) }}>
-                                        {result.candidate_id}
-                                      </Avatar>
-                                    }
-                                    label={getCandidateName(result.candidate_id)}
-                                    sx={{ bgcolor: "#f5f5f5" }}
-                                  />
-                                </Box>
-                                <Box sx={{ 
-                                  display: "flex", 
-                                  bgcolor: "white", 
-                                  p: 1.5, 
-                                  borderRadius: 2,
-                                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-                                }}>
-                                  <Box sx={{ flex: 1, textAlign: "center" }}>
-                                    <Typography variant="body2" color="textSecondary">คะแนน</Typography>
-                                    <Typography variant="h6" color="primary">{result.votes || 0}</Typography>
-                                  </Box>
-                                  <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-                                  <Box sx={{ flex: 1, textAlign: "center" }}>
-                                    <Typography variant="body2" color="textSecondary">บัตรเสีย</Typography>
-                                    <Typography variant="h6" color="error">{result.void_ballots || 0}</Typography>
-                                  </Box>
-                                  <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-                                  <Box sx={{ flex: 1, textAlign: "center" }}>
-                                    <Typography variant="body2" color="textSecondary">ไม่ประสงค์</Typography>
-                                    <Typography variant="h6" color="warning.dark">{result.no_vote_ballots || 0}</Typography>
-                                  </Box>
-                                </Box>
-                              </Box>
-                            </ListItem>
-                            {index < submittedResults.length - 1 && <Divider />}
-                          </React.Fragment>
-                        ))}
-                      </List>
-                    </React.Fragment>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {/* Snackbar for notifications */}
-          <Snackbar
-            open={snackbar.open}
-            autoHideDuration={6000}
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          >
-            <Alert 
-              onClose={() => setSnackbar({ ...snackbar, open: false })} 
-              severity={snackbar.severity}
-              sx={{ 
-                width: '100%', 
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                borderRadius: 2
-              }}
-              variant="filled"
-            >
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
-        </Container>
-      </Box>
-    </ThemeProvider>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          เขตเลือกตั้ง:
+                        </Typography>
+                        <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                          {formData.zone_id ? 
+                            getZone(formData.zone_id)?.zone_name || 'ไม่ระบุ' : 
+                            'ยังไม่ได้เลือก'}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          หน่วยเลือกตั้ง:
+                        </Typography>
+                        <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                          {formData.unit_id ? 
+                            getUnit(formData.unit_id)?.unit_name || 'ไม่ระบุ' : 
+                            'ยังไม่ได้เลือก'}
+                        </Typography>
+                      </Grid>
+                      
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          จำนวนคะแนน:
+                        </Typography>
+                        <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                          {formData.votes ? 
+                            `${formData.votes} คะแนน` : 
+                            'ยังไม่ได้ระบุ'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                    
+                    <Divider sx={{ my: 1 }} />
+                    
+                    <Typography variant="body2" color="textSecondary">
+                      เวลาปัจจุบัน: {getCurrentTime()}
+                    </Typography>
+                    
+                    {!hasSelection() && (
+                      <Alert severity="warning" sx={{ mt: 2 }}>
+                        <Typography variant="body2">
+                          กรุณากรอกข้อมูลในฟอร์มเพื่อแสดงสรุปข้อมูลที่จะบันทึก
+                        </Typography>
+                      </Alert>
+                    )}
+                  </Paper>
+                </Grid>
+                
+                {/* Submit Button */}
+                <Grid item xs={12}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    fullWidth
+                    startIcon={isSubmitting ? <CircularProgress size={24} color="inherit" /> : <SaveIcon />}
+                    disabled={isSubmitting}
+                    sx={{ mt: 1, py: 1.5 }}
+                  >
+                    {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 };
 
-export default ElectionResults;
+export default MayorVotesForm;

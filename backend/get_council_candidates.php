@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');  // Allow all domains
+header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -22,25 +22,15 @@ if ($conn->connect_error) {
     exit;
 }
 
-// คำสั่ง SQL สำหรับ JOIN ตาราง candidates กับ mayor_votes
-$sql = "
-    SELECT candidates.id, candidates.name, candidates.image_Base64, IFNULL(SUM(mayor_votes.votes), 0) AS votes
-    FROM candidates
-    LEFT JOIN mayor_votes ON candidates.id = mayor_votes.candidate_id
-    GROUP BY candidates.id
-";
+// ดึงข้อมูลผู้สมัครสมาชิกสภาทั้งหมด
+$sql = "SELECT id, name, number, color, image_base64, zone_id FROM council_candidates";
 
 $result = $conn->query($sql);
 $candidates = [];
 
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
-        $candidates[] = [
-            'id' => $row['id'],
-            'name' => $row['name'],
-            'image_Base64' => $row['image_Base64'],
-            'votes' => $row['votes'],
-        ];
+        $candidates[] = $row;
     }
 
     echo json_encode([
@@ -50,10 +40,9 @@ if ($result && $result->num_rows > 0) {
 } else {
     echo json_encode([
         "success" => false,
-        "message" => "ไม่พบข้อมูลผู้สมัคร"
+        "message" => "ไม่พบข้อมูลผู้สมัครสมาชิกสภา"
     ]);
 }
 
-// ปิดการเชื่อมต่อ
 $conn->close();
 ?>

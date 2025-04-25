@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');  // Allow all domains
+header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -22,38 +22,26 @@ if ($conn->connect_error) {
     exit;
 }
 
-// คำสั่ง SQL สำหรับ JOIN ตาราง candidates กับ mayor_votes
-$sql = "
-    SELECT candidates.id, candidates.name, candidates.image_Base64, IFNULL(SUM(mayor_votes.votes), 0) AS votes
-    FROM candidates
-    LEFT JOIN mayor_votes ON candidates.id = mayor_votes.candidate_id
-    GROUP BY candidates.id
-";
-
+// ดึงข้อมูลหน่วยเลือกตั้งทั้งหมด
+$sql = "SELECT id, unit_name, zone_id FROM election_units";
 $result = $conn->query($sql);
-$candidates = [];
+$units = [];
 
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
-        $candidates[] = [
-            'id' => $row['id'],
-            'name' => $row['name'],
-            'image_Base64' => $row['image_Base64'],
-            'votes' => $row['votes'],
-        ];
+        $units[] = $row;
     }
 
     echo json_encode([
         "success" => true,
-        "results" => $candidates
+        "units" => $units
     ]);
 } else {
     echo json_encode([
         "success" => false,
-        "message" => "ไม่พบข้อมูลผู้สมัคร"
+        "message" => "ไม่พบข้อมูลหน่วยเลือกตั้ง"
     ]);
 }
 
-// ปิดการเชื่อมต่อ
 $conn->close();
 ?>
