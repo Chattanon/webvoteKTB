@@ -10,6 +10,7 @@ import ElectionPageMem from "./municipal_Mem_page/ElectionPageMem";
 import ElectionResultsPagegraph from "./mayor_page/ElectionResultsPagegraph";
 import ElectionInfo from "./ElectionInfo ";
 import ElectionResultsPageMem from "./municipal_Mem_page/ElectionResultsPageMem"
+import ElectionResultsMem from "./municipal_Mem_page/ElectionResultsMem";
 
 const ProtectedRoute = ({ children }) => {
   return localStorage.getItem("auth") === "true" ? children : <Navigate to="/login" />;
@@ -29,6 +30,7 @@ function App() {
         <Route path="/summary" element={<ProtectedRoute><ElectionResultsPage /></ProtectedRoute>} />
         <Route path="/summary2" element={<ProtectedRoute><ElectionResultsPagegraph /></ProtectedRoute>} />
         <Route path="/results-council" element={<ProtectedRoute><ElectionResultsPageMem /></ProtectedRoute>} /> {/* หน้าของสมาชิกสภาเทศบาล */}
+        <Route path="/council-summary" element={<ProtectedRoute><ElectionResultsMem /></ProtectedRoute>} />
 
         
       </Routes>

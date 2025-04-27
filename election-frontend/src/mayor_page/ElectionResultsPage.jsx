@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Grid, // Make sure to import from @mui/material/Grid if using v1 or @mui/material if using v2
+  Grid,
   Card,
   CardContent,
   Avatar,
@@ -28,12 +28,15 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import { getFullAPI } from "../api/apiConfig";
+import RecentActorsIcon from "@mui/icons-material/RecentActors";
 
 // Component to display individual candidate results
 const CandidateResults = ({
   candidates,
   processedPollingStations,
   totalPollingStations,
+  zoneUnitCounts,
+  pollingUnitsData,
 }) => {
   const theme = useTheme();
 
@@ -43,7 +46,7 @@ const CandidateResults = ({
       sx={{
         p: 4,
         borderRadius: "12px",
-        height: "90%",
+        height: "95%",
         display: "flex",
         flexDirection: "column",
       }}
@@ -78,22 +81,26 @@ const CandidateResults = ({
           </Typography>
         </Box>
       </Box>
-
       {/* Candidate cards */}
-      <Grid container spacing={2} sx={{ mb: 1, flex: 1 }}>
+      <Grid container spacing={3} sx={{ mb: 1, flex: 1 }}>
         {candidates.map((candidate, index) => (
           <Grid
             xs={12}
             sm={6}
             md={8}
             key={candidate.id}
-            sx={{ display: "flex", flexDirection: "row", alignItems: "center" }}
+            sx={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "end",
+            }}
           >
             <Card
               elevation={3}
               sx={{
                 display: "flex",
-                height: "80%",
+                height: "90%",
                 width: "100%",
                 borderRadius: "12px",
                 alignItems: "center",
@@ -111,7 +118,7 @@ const CandidateResults = ({
                     position: "absolute",
                     top: 0,
                     right: 0,
-                    bgcolor: "rgba(255, 215, 0, 0.5)",
+                    bgcolor: "rgba(255, 0, 0, 0.5)",
                     color: "black",
                     padding: "4px 8px",
                     fontWeight: "bold",
@@ -136,7 +143,7 @@ const CandidateResults = ({
                 }}
               />
 
-              <CardContent sx={{ width: "100%", p: 2 }}>
+              <CardContent sx={{ width: "100%", p: 5 }}>
                 <Box sx={{ display: "flex", mb: 2 }}>
                   <Avatar
                     src={candidate.image}
@@ -234,9 +241,7 @@ const CandidateResults = ({
           </Grid>
         ))}
       </Grid>
-
-      {/* Polling stations status */}
-      {/* Polling stations status */}
+      {/* Polling stations status in CandidateResults */}
       <Paper
         elevation={1}
         sx={{
@@ -281,211 +286,80 @@ const CandidateResults = ({
             flexWrap: "wrap",
           }}
         >
-          {/* เขต 1 */}
-          <Box sx={{ flex: "1 1 30%", minWidth: "250px" }}>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: "bold",
-                mb: 1,
-                color: theme.palette.primary.main,
-              }}
-            >
-              เขต 1 ({Math.min(processedPollingStations, 6)}/6)
-            </Typography>
+          {/* แสดงเขตทั้ง 3 เขต */}
+          {["เขตที่ 1", "เขตที่ 2", "เขตที่ 3"].map((zoneName) => {
+            // คัดกรองเฉพาะหน่วยที่อยู่ในเขตนี้
+            const zoneUnits =
+              pollingUnitsData && pollingUnitsData.filter
+                ? pollingUnitsData.filter((unit) => unit.zone_name === zoneName)
+                : [];
 
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 1,
-              }}
-            >
-              {Array.from({ length: 6 }, (_, i) => i + 1).map((num) => (
-                <Tooltip
-                  key={`district1-${num}`}
-                  title={
-                    num <= Math.min(processedPollingStations, 6)
-                      ? "นับเสร็จสิ้น"
-                      : "ยังไม่ได้นับ"
-                  }
-                  arrow
+            // ดึงหมายเลขหน่วยที่นับแล้ว
+            const processedUnitIds = zoneUnits.map((unit) =>
+              parseInt(unit.unit_name.replace(/[^\d]/g, ""), 10)
+            );
+
+            // นับหน่วยที่มีข้อมูลแล้ว
+            const processedCount = zoneUnits.length;
+            const totalUnits = 6; // แต่ละเขตมี 6 หน่วย
+
+            return (
+              <Box key={zoneName} sx={{ flex: "1 1 30%", minWidth: "250px" }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: "bold",
+                    mb: 1,
+                    color: theme.palette.primary.main,
+                  }}
                 >
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      borderRadius: "8px",
-                      bgcolor:
-                        num <= Math.min(processedPollingStations, 6)
-                          ? "rgba(25, 118, 210, 0.1)"
-                          : "rgba(0, 0, 0, 0.05)",
-                      border:
-                        num <= Math.min(processedPollingStations, 6)
-                          ? "2px solid #1976D2"
-                          : "1px solid rgba(0,0,0,0.1)",
-                      color:
-                        num <= Math.min(processedPollingStations, 6)
-                          ? "#1976D2"
-                          : "text.secondary",
-                      fontWeight: "bold",
-                      fontSize: "0.9rem",
-                      boxShadow:
-                        num <= Math.min(processedPollingStations, 6)
-                          ? "0 2px 8px rgba(25, 118, 210, 0.2)"
-                          : "none",
-                    }}
-                  >
-                    {num}
-                  </Box>
-                </Tooltip>
-              ))}
-            </Box>
-          </Box>
+                  {zoneName} ({processedCount}/{totalUnits} หน่วย)
+                </Typography>
 
-          {/* เขต 2 */}
-          <Box sx={{ flex: "1 1 30%", minWidth: "250px" }}>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: "bold",
-                mb: 1,
-                color: theme.palette.primary.main,
-              }}
-            >
-              เขต 2 ({Math.max(0, Math.min(processedPollingStations - 6, 6))}/6)
-            </Typography>
+                {/* แสดงรายการเป็นช่องเล็ก ๆ */}
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  {Array.from({ length: totalUnits }, (_, i) => {
+                    const unitNumber = i + 1;
+                    // ตรวจสอบว่าหน่วยนี้นับแล้วหรือยัง
+                    const isProcessed = processedUnitIds.includes(unitNumber);
 
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 1,
-              }}
-            >
-              {Array.from({ length: 6 }, (_, i) => i + 1).map((num) => (
-                <Tooltip
-                  key={`district2-${num}`}
-                  title={
-                    num <=
-                    Math.max(0, Math.min(processedPollingStations - 6, 6))
-                      ? "นับเสร็จสิ้น"
-                      : "ยังไม่ได้นับ"
-                  }
-                  arrow
-                >
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      borderRadius: "8px",
-                      bgcolor:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 6, 6))
-                          ? "rgba(25, 118, 210, 0.1)"
-                          : "rgba(0, 0, 0, 0.05)",
-                      border:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 6, 6))
-                          ? "2px solid #1976D2"
-                          : "1px solid rgba(0,0,0,0.1)",
-                      color:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 6, 6))
-                          ? "#1976D2"
-                          : "text.secondary",
-                      fontWeight: "bold",
-                      fontSize: "0.9rem",
-                      boxShadow:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 6, 6))
-                          ? "0 2px 8px rgba(25, 118, 210, 0.2)"
-                          : "none",
-                    }}
-                  >
-                    {num}
-                  </Box>
-                </Tooltip>
-              ))}
-            </Box>
-          </Box>
-
-          {/* เขต 3 */}
-          <Box sx={{ flex: "1 1 30%", minWidth: "250px" }}>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: "bold",
-                mb: 1,
-                color: theme.palette.primary.main,
-              }}
-            >
-              เขต 3 ({Math.max(0, Math.min(processedPollingStations - 12, 6))}
-              /6)
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 1,
-              }}
-            >
-              {Array.from({ length: 6 }, (_, i) => i + 1).map((num) => (
-                <Tooltip
-                  key={`district3-${num}`}
-                  title={
-                    num <=
-                    Math.max(0, Math.min(processedPollingStations - 12, 6))
-                      ? "นับเสร็จสิ้น"
-                      : "ยังไม่ได้นับ"
-                  }
-                  arrow
-                >
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      borderRadius: "8px",
-                      bgcolor:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 12, 6))
-                          ? "rgba(25, 118, 210, 0.1)"
-                          : "rgba(0, 0, 0, 0.05)",
-                      border:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 12, 6))
-                          ? "2px solid #1976D2"
-                          : "1px solid rgba(0,0,0,0.1)",
-                      color:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 12, 6))
-                          ? "#1976D2"
-                          : "text.secondary",
-                      fontWeight: "bold",
-                      fontSize: "0.9rem",
-                      boxShadow:
-                        num <=
-                        Math.max(0, Math.min(processedPollingStations - 12, 6))
-                          ? "0 2px 8px rgba(25, 118, 210, 0.2)"
-                          : "none",
-                    }}
-                  >
-                    {num}
-                  </Box>
-                </Tooltip>
-              ))}
-            </Box>
-          </Box>
+                    return (
+                      <Tooltip
+                        key={`${zoneName}-unit-${unitNumber}`}
+                        title={isProcessed ? "นับเสร็จสิ้น" : "รอการนับคะแนน"}
+                        arrow
+                      >
+                        <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            borderRadius: "8px",
+                            bgcolor: isProcessed
+                              ? "rgba(25, 118, 210, 0.1)"
+                              : "rgba(158, 158, 158, 0.1)",
+                            border: isProcessed
+                              ? "2px solid #1976D2"
+                              : "2px solid #9E9E9E",
+                            color: isProcessed ? "#1976D2" : "#9E9E9E",
+                            fontWeight: "bold",
+                            fontSize: "0.9rem",
+                            boxShadow: isProcessed
+                              ? "0 2px 8px rgba(25, 118, 210, 0.2)"
+                              : "0 2px 8px rgba(0, 0, 0, 0.1)",
+                          }}
+                        >
+                          {unitNumber}
+                        </Box>
+                      </Tooltip>
+                    );
+                  })}
+                </Box>
+              </Box>
+            );
+          })}
         </Box>
       </Paper>
     </Paper>
@@ -493,21 +367,151 @@ const CandidateResults = ({
 };
 
 // Component to display election statistics and charts
-const ElectionStatistics = () => {
-  // Data for charts
+const ElectionStatistics = ({ totalVotes }) => {
+  // State for ballot data from API
+  const [ballotData, setBallotData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const eligibleVoters = 11806;
+  // คำนวณเปอร์เซ็นต์ผู้มาใช้สิทธิ์และไม่มาใช้สิทธิ์
+  const turnoutPercentage = eligibleVoters
+    ? ((totalVotes / eligibleVoters) * 100).toFixed(1)
+    : "0.0";
+
+  const notTurnoutPercentage = (100 - turnoutPercentage).toFixed(1);
+
+  // Data for voter turnout chart
   const voterTurnoutData = [
-    { id: 0, label: "มาใช้สิทธิ์", value: 49.2, color: "#FF9800" },
-    { id: 1, label: "ไม่มาใช้สิทธิ์", value: 50.8, color: "#9E9E9E" },
+    {
+      id: 0,
+      label: "มาใช้สิทธิ์",
+      value: parseFloat(turnoutPercentage),
+      color: "#FF9800",
+    },
+    {
+      id: 1,
+      label: "ไม่มาใช้สิทธิ์",
+      value: parseFloat(notTurnoutPercentage),
+      color: "#9E9E9E",
+    },
   ];
 
-  const ballotData = [
-    { id: 0, label: "บัตรดี", value: 97.5, color: "#2196F3" },
-    { id: 1, label: "บัตรเสีย", value: 1.5, color: "#F44336" },
-    { id: 2, label: "บัตรไม่ประสงค์ลงคะแนน", value: 1, color: "#9E9E9E" },
-  ];
+  // Fetch ballot data from API
+  useEffect(() => {
+    const fetchBallotData = async () => {
+      // ไม่ต้องเซ็ต loading เป็น true ทุกครั้ง เพื่อป้องกันการกระพริบหลังจากโหลดครั้งแรก
+      const isFirstLoad = loading;
+
+      try {
+        const response = await fetch(getFullAPI("get_vote_cards_api.php"));
+        const data = await response.json();
+
+        if (data.success) {
+          // ใช้ค่า badVotes และ noVote จาก API
+          const badVotes = data.results.bad_votes;
+          const noVote = data.results.no_vote;
+
+          // ใช้ totalVotes ที่ส่งเข้ามาเป็นค่า goodVotes โดยตรง
+          const goodVotes = totalVotes;
+
+          // ปรับการคำนวณ total เพื่อใช้ในการคำนวณเปอร์เซ็นต์
+          const total = goodVotes + badVotes + noVote;
+
+          // คำนวณเปอร์เซ็นต์
+          const goodPercentage =
+            total > 0 ? ((goodVotes / total) * 100).toFixed(1) : "0.0";
+          const badPercentage =
+            total > 0 ? ((badVotes / total) * 100).toFixed(1) : "0.0";
+          const noVotePercentage =
+            total > 0 ? ((noVote / total) * 100).toFixed(1) : "0.0";
+
+          // สร้างข้อมูลใหม่
+          const newBallotData = [
+            {
+              id: 0,
+              label: "บัตรดี",
+              value: parseFloat(goodPercentage),
+              count: goodVotes,
+              color: "#2196F3",
+            },
+            {
+              id: 1,
+              label: "บัตรเสีย",
+              value: parseFloat(badPercentage),
+              count: badVotes,
+              color: "#F44336",
+            },
+            {
+              id: 2,
+              label: "บัตรไม่ประสงค์ลงคะแนน",
+              value: parseFloat(noVotePercentage),
+              count: noVote,
+              color: "#9E9E9E",
+            },
+          ];
+
+          // เปรียบเทียบข้อมูลเก่าและใหม่ ถ้าเหมือนกันจะไม่อัปเดต state
+          const hasDataChanged = checkIfDataChanged(ballotData, newBallotData);
+
+          if (hasDataChanged || isFirstLoad) {
+            setBallotData(newBallotData);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching ballot data:", error);
+        // ใช้ค่า default หากมีข้อผิดพลาด และถ้ายังไม่มีข้อมูล
+        if (ballotData.length === 0) {
+          setBallotData([
+            {
+              id: 0,
+              label: "บัตรดี",
+              value: 97.5,
+              count: totalVotes,
+              color: "#2196F3",
+            },
+            {
+              id: 1,
+              label: "บัตรเสีย",
+              value: 1.5,
+              count: 0,
+              color: "#F44336",
+            },
+            {
+              id: 2,
+              label: "บัตรไม่ประสงค์ลงคะแนน",
+              value: 1.0,
+              count: 0,
+              color: "#9E9E9E",
+            },
+          ]);
+        }
+      } finally {
+        if (isFirstLoad) {
+          setLoading(false);
+        }
+      }
+    };
+    const checkIfDataChanged = (oldData, newData) => {
+      if (oldData.length !== newData.length) return true;
+
+      for (let i = 0; i < oldData.length; i++) {
+        if (
+          oldData[i].value !== newData[i].value ||
+          oldData[i].count !== newData[i].count
+        ) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    fetchBallotData();
+    // อัปเดตทุก 5 วินาที
+    const interval = setInterval(fetchBallotData, 300000);
+    return () => clearInterval(interval);
+  }, [totalVotes]); // เพิ่ม totalVotes เป็น dependency
 
   return (
-    <Stack spacing={2} sx={{ height: "100%" }}>
+    <Stack spacing={3} sx={{ height: "100%" }}>
       {/* Election information card */}
       <Paper
         elevation={2}
@@ -552,40 +556,19 @@ const ElectionStatistics = () => {
               เวลา 08:00 - 17:00 น.
             </Typography>
           </Box>
-        </Box>
-
-        <Divider sx={{ my: 2 }} />
-
-        <Box>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: "bold",
-              mb: 0.5,
-            }}
-          >
-            สถานะบัตรเลือกตั้ง
-          </Typography>
-          <Stack spacing={0.5} sx={{ ml: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <CheckCircleIcon sx={{ color: "#2196F3", mr: 1 }} />
-              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                บัตรดี: 7,677 ใบ (97.5%)
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <CancelIcon sx={{ color: "#F44336", mr: 1 }} />
-              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                บัตรเสีย: 118 ใบ (1.5%)
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-              <ReportProblemIcon sx={{ color: "#9E9E9E", mr: 1 }} />
-              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                บัตรไม่ประสงค์ลงคะแนน: 79 ใบ (1.0%)
-              </Typography>
-            </Box>
-          </Stack>
+          <Box sx={{ display: "flex", alignItems: "center", ml: 1, mt: 1 }}>
+            <RecentActorsIcon color="primary" sx={{ mr: 1 }} />
+            <Typography variant="h6" align="center">
+              จำนวนผู้มีสิทธิเลือกตั้งทั้งหมด:{" "}
+              <Typography
+                component="span"
+                sx={{ fontSize: "1.2rem", fontWeight: "bold" }}
+              >
+                {eligibleVoters.toLocaleString()}
+              </Typography >{" "}
+              คน
+            </Typography>
+          </Box>
         </Box>
       </Paper>
 
@@ -620,7 +603,7 @@ const ElectionStatistics = () => {
               },
             ]}
             width={200}
-            height={140}
+            height={180}
             colors={voterTurnoutData.map((item) => item.color)}
             slotProps={{
               legend: { hidden: true },
@@ -647,10 +630,10 @@ const ElectionStatistics = () => {
                   mr: 1,
                 }}
               />
-              <Typography variant="body2" sx={{ mr: 2 }}>
+              <Typography variant="body1" sx={{ mr: 2 }}>
                 {item.label}
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+              <Typography variant="body1" sx={{ fontWeight: "bold" }}>
                 {item.value}%
               </Typography>
             </Box>
@@ -672,59 +655,68 @@ const ElectionStatistics = () => {
         >
           ประเภทบัตรเลือกตั้ง
         </Typography>
-        <Box sx={{ display: "flex", justifyContent: "center" }}>
-          <PieChart
-            series={[
-              {
-                data: ballotData,
-                innerRadius: 40,
-                outerRadius: 60,
-                paddingAngle: 2,
-                cornerRadius: 4,
-                startAngle: 0,
-                endAngle: 360,
-                cx: 100,
-                cy: 70,
-                arcLabel: () => "",
-              },
-            ]}
-            width={200}
-            height={140}
-            colors={ballotData.map((item) => item.color)}
-            slotProps={{
-              legend: { hidden: true },
-            }}
-          />
-        </Box>
-        <Box sx={{ mt: 1 }}>
-          {ballotData.map((item) => (
-            <Box
-              key={item.id}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                mb: 0.5,
-                justifyContent: "center",
-              }}
-            >
-              <Box
-                sx={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 1,
-                  bgcolor: item.color,
-                  mr: 1,
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+            <Typography>กำลังโหลดข้อมูล...</Typography>
+          </Box>
+        ) : (
+          <>
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <PieChart
+                series={[
+                  {
+                    data: ballotData,
+                    innerRadius: 40,
+                    outerRadius: 60,
+                    paddingAngle: 2,
+                    cornerRadius: 4,
+                    startAngle: 0,
+                    endAngle: 360,
+                    cx: 100,
+                    cy: 70,
+                    arcLabel: () => "",
+                  },
+                ]}
+                width={200}
+                height={150}
+                colors={ballotData.map((item) => item.color)}
+                slotProps={{
+                  legend: { hidden: true },
                 }}
               />
-              <Typography variant="body2" sx={{ mr: 2 }}>
-                {item.label}
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                {item.value}%
-              </Typography>
             </Box>
-          ))}
-        </Box>
+            <Box sx={{ mt: 1 }}>
+              {ballotData.map((item) => (
+                <Box
+                  key={item.id}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    mb: 0.5,
+                    justifyContent: "center",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 1,
+                      bgcolor: item.color,
+                      mr: 1,
+                    }}
+                  />
+                  <Typography variant="body1" sx={{ mr: 2 }}>
+                    {item.label}
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: "bold" }}>
+                    {item.value}% (
+                    {item.count ? item.count.toLocaleString() : "0"})
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </>
+        )}
       </Paper>
     </Stack>
   );
@@ -736,9 +728,12 @@ const ElectionResultsPage = () => {
   const [candidates, setCandidates] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [processedPollingStations, setProcessedPollingStations] = useState(4);
+  const [processedPollingStations, setProcessedPollingStations] = useState(0);
   const totalPollingStations = 18; // จำนวนเขต
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [zoneUnitCounts, setZoneUnitCounts] = useState({}); // ตัวแปรเก็บจำนวนหน่วยต่อเขต
+  // เพิ่ม state เก็บข้อมูลดิบของหน่วยเลือกตั้ง
+  const [pollingUnitsData, setPollingUnitsData] = useState([]);
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -787,6 +782,38 @@ const ElectionResultsPage = () => {
 
     fetchCandidates();
     const interval = setInterval(fetchCandidates, 5000); // รีเฟรชทุก 5 วินาที
+    return () => clearInterval(interval);
+  }, []);
+
+  // ในส่วนของ useEffect ที่ fetch ข้อมูลหน่วยเลือกตั้ง
+  useEffect(() => {
+    const fetchPollingStations = async () => {
+      try {
+        const response = await fetch(getFullAPI("get_units_and_zones_api.php"));
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.results)) {
+          // เก็บข้อมูลดิบของหน่วยเลือกตั้ง
+          setPollingUnitsData(data.results);
+
+          // กลุ่มข้อมูลตาม zone_name แล้วนับจำนวน (สำหรับแสดงจำนวนรวม)
+          const groupedByZone = data.results.reduce((acc, curr) => {
+            const zone = curr.zone_name;
+            if (!acc[zone]) acc[zone] = 0;
+            acc[zone]++;
+            return acc;
+          }, {});
+
+          setZoneUnitCounts(groupedByZone);
+          setProcessedPollingStations(data.results.length);
+        }
+      } catch (error) {
+        console.error("Error fetching polling station status:", error);
+      }
+    };
+
+    fetchPollingStations();
+    const interval = setInterval(fetchPollingStations, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -936,12 +963,14 @@ const ElectionResultsPage = () => {
               candidates={candidates}
               processedPollingStations={processedPollingStations}
               totalPollingStations={totalPollingStations}
+              zoneUnitCounts={zoneUnitCounts}
+              pollingUnitsData={pollingUnitsData} // Pass the data to the component
             />
           </Box>
 
           {/* Right side - Election statistics */}
           <Box sx={{ flex: 1 }}>
-            <ElectionStatistics />
+            <ElectionStatistics totalVotes={totalVotes} />
           </Box>
         </Box>
       </Container>

@@ -1,70 +1,749 @@
-import React, { useState } from "react";
-import "./ElectionResults.css";
+import React, { useState, useEffect } from "react";
+import {
+  Container,
+  Typography,
+  Box,
+  TextField,
+  Button,
+  Grid,
+  Paper,
+  Card,
+  CardContent,
+  Alert,
+  Snackbar,
+  CircularProgress,
+  Autocomplete,
+  Divider,
+} from "@mui/material";
+import SaveIcon from "@mui/icons-material/Save";
+import HowToVoteIcon from "@mui/icons-material/HowToVote";
+import SummarizeIcon from "@mui/icons-material/Summarize";
+import { getFullAPI } from "../api/apiConfig";
 
-const ElectionResults = () => {
-  const [selectedUnit, setSelectedUnit] = useState("");
-  const [votes, setVotes] = useState({
-    candidate1: "",
-    candidate2: "",
-    candidate3: "",
+const CouncilVotesForm = () => {
+  // State for form values
+  const [formData, setFormData] = useState({
+    candidate_id: "",
+    zone_id: "",
+    unit_id: "",
+    votes: "",
   });
-  const [submittedResults, setSubmittedResults] = useState([]);
 
-  const electionUnits = [
-    { id: 1, name: "เขตที่ 1" },
-    { id: 2, name: "เขตที่ 2" },
-    { id: 3, name: "เขตที่ 3" },
-  ];
+  // State for form validation
+  const [errors, setErrors] = useState({
+    candidate_id: false,
+    zone_id: false,
+    unit_id: false,
+    votes: false,
+  });
 
-  const handleVoteChange = (e) => {
-    setVotes({ ...votes, [e.target.name]: e.target.value });
-  };
+  // State for snackbar
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!selectedUnit || Object.values(votes).some((v) => v === "")) {
-      alert("กรุณากรอกข้อมูลให้ครบ");
-      return;
+  // State for loading indicator
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // State for data from API
+  const [candidates, setCandidates] = useState([]);
+  const [zones, setZones] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Additional states for API error tracking
+  const [apiErrors, setApiErrors] = useState({
+    candidates: false,
+    zones: false,
+    units: false,
+  });
+
+  // Fetch data from API on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+
+      // Reset API errors
+      setApiErrors({
+        candidates: false,
+        zones: false,
+        units: false,
+      });
+
+      try {
+        // Fetch candidates - ใช้ API สำหรับผู้สมัครสมาชิกสภา
+        console.log(
+          "Fetching council candidates from:",
+          getFullAPI("get_council_candidates.php")
+        );
+        const candidatesResponse = await fetch(
+          getFullAPI("get_council_candidates.php")
+        );
+        const candidatesData = await candidatesResponse.json();
+        console.log("Council Candidates Response:", candidatesData);
+        
+        if (candidatesData.success && Array.isArray(candidatesData.results)) {
+          // ปรับแก้ให้ใช้ .results จาก API
+          // Add a unique identifier to each candidate 
+          const candidatesWithUniqueIds = candidatesData.results.map(candidate => ({
+            ...candidate,
+            uniqueId: `${candidate.number}-${candidate.zone_id}-${candidate.id || Date.now()}` // Create a unique ID
+          }));
+          setCandidates(candidatesWithUniqueIds);
+        } else {
+          console.error("Invalid candidates data format:", candidatesData);
+          setApiErrors((prev) => ({ ...prev, candidates: true }));
+          setCandidates([]);
+        }
+
+        // Fetch zones
+        console.log("Fetching zones from:", getFullAPI("get_zones_api.php"));
+        const zonesResponse = await fetch(getFullAPI("get_zones_api.php"));
+        const zonesData = await zonesResponse.json();
+        console.log("Zones Response:", zonesData);
+
+        if (zonesData.success && Array.isArray(zonesData.zones)) {
+          // ปรับแก้ให้ใช้ .zones จาก API
+          setZones(zonesData.zones);
+        } else {
+          console.error("Invalid zones data format:", zonesData);
+          setApiErrors((prev) => ({ ...prev, zones: true }));
+          setZones([]);
+        }
+
+        // Fetch units
+        console.log("Fetching units from:", getFullAPI("get_units_api.php"));
+        const unitsResponse = await fetch(getFullAPI("get_units_api.php"));
+        const unitsData = await unitsResponse.json();
+        console.log("Units Response:", unitsData);
+
+        if (unitsData.success && Array.isArray(unitsData.units)) {
+          // ปรับแก้ให้ใช้ .units จาก API
+          setUnits(unitsData.units);
+        } else {
+          console.error("Invalid units data format:", unitsData);
+          setApiErrors((prev) => ({ ...prev, units: true }));
+          setUnits([]);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setSnackbar({
+          open: true,
+          message:
+            "ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง: " + error.message,
+          severity: "error",
+        });
+
+        // Set all API errors to true
+        setApiErrors({
+          candidates: true,
+          zones: true,
+          units: true,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Handle input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: false,
+      });
     }
-    setSubmittedResults([...submittedResults, { unit: selectedUnit, ...votes }]);
-    setVotes({ candidate1: "", candidate2: "", candidate3: "" });
   };
+
+  // Handle dropdown changes (for Autocomplete components)
+  const handleAutocompleteChange = (name, value) => {
+    console.log(`การเปลี่ยนแปลงใน Autocomplete - ${name}:`, value);
+    
+    setFormData({
+      ...formData,
+      [name]: value || "",
+    });
+
+    // Clear error
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: false,
+      });
+    }
+  };
+
+  // Form validation
+  const validateForm = () => {
+    const newErrors = {
+      candidate_id: !formData.candidate_id,
+      zone_id: !formData.zone_id,
+      unit_id: !formData.unit_id,
+      votes:
+        !formData.votes ||
+        formData.votes < 0 ||
+        !Number.isInteger(Number(formData.votes)),
+    };
+
+    setErrors(newErrors);
+
+    // Return true if no errors (all values are false)
+    return !Object.values(newErrors).some((error) => error);
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
   
+    if (validateForm()) {
+      setIsSubmitting(true);
+  
+      try {
+        // Find the selected candidate to get the actual ID
+        const selectedCandidate = candidates.find(c => c.uniqueId === formData.candidate_id);
+        const actualCandidateId = selectedCandidate ? selectedCandidate.id : null;
+        
+        // Add current timestamp and use the actual candidate ID
+        const submissionData = {
+          ...formData,
+          candidate_id: actualCandidateId, // Replace uniqueId with actual ID
+          created_at: new Date().toISOString(),
+        };
+  
+        // Log the data being sent
+        console.log("Submitting data:", submissionData);
+  
+        // Send data to the API
+        const response = await fetch(
+          getFullAPI("insert_council_votes_api.php"),
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(submissionData),
+          }
+        );
+
+        const result = await response.json();
+        console.log("Submission result:", result);
+
+        if (result.success) {
+          // Show success message
+          setSnackbar({
+            open: true,
+            message: result.message || "บันทึกข้อมูลสำเร็จ",
+            severity: "success",
+          });
+
+          // Reset form but keep the zone selection for convenience
+          const currentZone = formData.zone_id;
+          setFormData({
+            candidate_id: "",
+            zone_id: currentZone, // รักษาเขตเลือกตั้งไว้
+            unit_id: "",
+            votes: "",
+          });
+        } else {
+          // Show error message
+          setSnackbar({
+            open: true,
+            message: result.message || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
+            severity: "error",
+          });
+        }
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        setSnackbar({
+          open: true,
+          message:
+            "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์: " + error.message,
+          severity: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      // Show validation error message
+      setSnackbar({
+        open: true,
+        message: "กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง",
+        severity: "error",
+      });
+    }
+  };
+
+  // Close snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar({
+      ...snackbar,
+      open: false,
+    });
+  };
+
+  // Get current time formatted for Thai locale
+  const getCurrentTime = () => {
+    return new Date().toLocaleString("th-TH", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  // Find candidate by number
+  const getCandidate = (number) => {
+    return candidates.find((c) => c.number === number) || null;
+  };
+
+  // Find zone by ID
+  const getZone = (id) => {
+    return zones.find((z) => z.id === id) || null;
+  };
+
+  // Find unit by ID
+  const getUnit = (id) => {
+    return units.find((u) => u.id === id) || null;
+  };
+
+  // Function to check if we have data
+  const hasData = () => {
+    return candidates.length > 0 && zones.length > 0 && units.length > 0;
+  };
+
+  // Function to retry loading data
+  const handleRetryLoad = () => {
+    // Rerun the useEffect by forcing a component update
+    setIsLoading(true);
+    setTimeout(() => {
+      // This will trigger the useEffect again
+      setCandidates([]);
+      setZones([]);
+      setUnits([]);
+    }, 100);
+  };
+
+  // Function to check if any selection has been made
+  const hasSelection = () => {
+    return (
+      formData.candidate_id ||
+      formData.zone_id ||
+      formData.unit_id ||
+      formData.votes
+    );
+  };
+
+  // Helper function to add zone information to option labels
+  const getCandidateLabel = (candidateId) => {
+    const candidate = candidates.find(c => c.uniqueId === candidateId);
+    if (!candidate) return "";
+    
+    const candidateZone = zones.find(z => z.id === candidate.zone_id);
+    const zoneName = candidateZone ? ` (${candidateZone.zone_name})` : "";
+    
+    return `${candidate.number} - ${candidate.name}${zoneName}`;
+  };
+
+  // Helper function to add zone information to unit labels
+  const getUnitLabel = (unitId) => {
+    const unit = units.find(u => u.id === unitId);
+    if (!unit) return "";
+    
+    const unitZone = zones.find(z => z.id === unit.zone_id);
+    const zoneName = unitZone ? ` (${unitZone.zone_name})` : "";
+    
+    return `${unit.unit_name}${zoneName}`;
+  };
 
   return (
-    <div className="results-container">
-      <h2>📊 กรอกผลการเลือกตั้ง</h2>
-      <form onSubmit={handleSubmit} className="results-form">
-        <label>เลือกเขตเลือกตั้ง:</label>
-        <select onChange={(e) => setSelectedUnit(e.target.value)} value={selectedUnit}>
-          <option value="">-- กรุณาเลือก --</option>
-          {electionUnits.map((unit) => (
-            <option key={unit.id} value={unit.name}>{unit.name}</option>
-          ))}
-        </select>
+    <Container maxWidth="md">
+      <Paper
+        elevation={3}
+        sx={{
+          p: 3,
+          mb: 4,
+          mt: 4,
+          background: "linear-gradient(to right, #4caf50, #2e7d32)",
+          borderRadius: 3,
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          align="center"
+          sx={{ color: "white" }}
+        >
+          <HowToVoteIcon
+            sx={{ fontSize: 40, mr: 1, verticalAlign: "middle" }}
+          />
+          บันทึกผลคะแนนสมาชิกสภาเทศบาล
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          align="center"
+          sx={{ color: "white", opacity: 0.9 }}
+        >
+          กรอกข้อมูลคะแนนเสียงเลือกตั้งในแต่ละหน่วยและเขตเลือกตั้ง
+        </Typography>
+      </Paper>
 
-        <label>คะแนนผู้สมัคร 1:</label>
-        <input type="number" name="candidate1" value={votes.candidate1} onChange={handleVoteChange} />
+      <Card elevation={3} sx={{ borderRadius: 2, mb: 4 }}>
+        <CardContent>
+          {isLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : !hasData() ? (
+            <Box sx={{ p: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }}>
+                <Typography variant="h6" component="div" gutterBottom>
+                  ไม่สามารถโหลดข้อมูลได้
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  พบปัญหาในการโหลดข้อมูล:
+                  <ul>
+                    {apiErrors.candidates && (
+                      <li>ไม่สามารถโหลดข้อมูลผู้สมัครสมาชิกสภา</li>
+                    )}
+                    {apiErrors.zones && (
+                      <li>ไม่สามารถโหลดข้อมูลเขตเลือกตั้ง</li>
+                    )}
+                    {apiErrors.units && (
+                      <li>ไม่สามารถโหลดข้อมูลหน่วยเลือกตั้ง</li>
+                    )}
+                  </ul>
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  กรุณาตรวจสอบการเชื่อมต่อเครือข่ายและเซิร์ฟเวอร์ API ของคุณ
+                </Typography>
+              </Alert>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleRetryLoad}
+                fullWidth
+              >
+                ลองใหม่อีกครั้ง
+              </Button>
+            </Box>
+          ) : (
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+              <Grid container spacing={3}>
+                {/* Debug Info - Show data counts */}
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      จำนวนข้อมูลที่โหลดได้: ผู้สมัครสมาชิกสภา{" "}
+                      {candidates.length} คน, เขตเลือกตั้ง {zones.length} เขต,
+                      หน่วยเลือกตั้ง {units.length} หน่วย
+                    </Typography>
+                  </Alert>
+                </Grid>
 
-        <label>คะแนนผู้สมัคร 2:</label>
-        <input type="number" name="candidate2" value={votes.candidate2} onChange={handleVoteChange} />
+                {/* Zone Selection */}
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    id="zone-select"
+                    options={zones.map((z) => z.id)}
+                    getOptionLabel={(option) => {
+                      const zone = getZone(option);
+                      return zone ? zone.zone_name : "";
+                    }}
+                    ListboxProps={{
+                      style: { maxHeight: "250px" },
+                    }}
+                    PopperProps={{
+                      style: { width: "auto", minWidth: "100%" },
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="เขตเลือกตั้ง"
+                        required
+                        error={errors.zone_id}
+                        helperText={
+                          errors.zone_id
+                            ? "กรุณาเลือกเขตเลือกตั้ง"
+                            : ""
+                        }
+                      />
+                    )}
+                    value={formData.zone_id || null}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange("zone_id", newValue);
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
 
-        <label>คะแนนผู้สมัคร 3:</label>
-        <input type="number" name="candidate3" value={votes.candidate3} onChange={handleVoteChange} />
+                {/* Candidate Selection - Modified to use uniqueId */}
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    id="candidate-select"
+                    options={candidates.map((c) => c.uniqueId)}
+                    getOptionLabel={(option) => getCandidateLabel(option)}
+                    ListboxProps={{
+                      style: { maxHeight: "250px" },
+                    }}
+                    PopperProps={{
+                      style: { width: "auto", minWidth: "100%" },
+                      placement: "bottom-start",
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="ผู้สมัครสมาชิกสภา"
+                        required
+                        error={errors.candidate_id}
+                        helperText={
+                          errors.candidate_id
+                            ? "กรุณาเลือกผู้สมัครสมาชิกสภา"
+                            : ""
+                        }
+                      />
+                    )}
+                    value={formData.candidate_id || null}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange("candidate_id", newValue);
+                      
+                      // If candidate is selected, we can automatically set the zone
+                      if (newValue) {
+                        const selectedCandidate = candidates.find(c => c.uniqueId === newValue);
+                        if (selectedCandidate && selectedCandidate.zone_id) {
+                          setFormData(prev => ({
+                            ...prev,
+                            zone_id: selectedCandidate.zone_id
+                          }));
+                        }
+                      }
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
 
-        <button type="submit">✅ บันทึกผล</button>
-      </form>
+                {/* Unit Selection */}
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    id="unit-select"
+                    options={units.map((u) => u.id)}
+                    getOptionLabel={(option) => getUnitLabel(option)}
+                    ListboxProps={{
+                      style: { maxHeight: "250px" },
+                    }}
+                    PopperProps={{
+                      style: { width: "auto", minWidth: "100%" },
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="หน่วยเลือกตั้ง"
+                        required
+                        error={errors.unit_id}
+                        helperText={
+                          errors.unit_id
+                            ? "กรุณาเลือกหน่วยเลือกตั้ง"
+                            : ""
+                        }
+                      />
+                    )}
+                    value={formData.unit_id || null}
+                    onChange={(event, newValue) => {
+                      handleAutocompleteChange("unit_id", newValue);
+                      
+                      // If unit is selected, we can automatically set the zone
+                      if (newValue) {
+                        const selectedUnit = units.find(u => u.id === newValue);
+                        if (selectedUnit && selectedUnit.zone_id) {
+                          setFormData(prev => ({
+                            ...prev,
+                            zone_id: selectedUnit.zone_id
+                          }));
+                        }
+                      }
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
 
-      <h3>📌 ผลคะแนนที่บันทึกแล้ว</h3>
-      <ul className="results-list">
-        {submittedResults.map((result, index) => (
-          <li key={index}>
-            🏛 {result.unit}: 🗳 {result.candidate1} | {result.candidate2} | {result.candidate3}
-          </li>
-        ))}
-      </ul>
-    </div>
+                {/* Votes Input */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    id="votes"
+                    name="votes"
+                    label="จำนวนคะแนน"
+                    type="number"
+                    value={formData.votes}
+                    onChange={handleChange}
+                    InputProps={{ inputProps: { min: 0 } }}
+                    error={errors.votes}
+                    helperText={
+                      errors.votes
+                        ? "กรุณากรอกจำนวนคะแนนเป็นตัวเลขที่มากกว่าหรือเท่ากับ 0"
+                        : ""
+                    }
+                    sx={{ mb: 2 }}
+                  />
+                </Grid>
+
+                {/* Summary Section - Modified to handle the uniqueId correctly */}
+                <Grid item xs={12}>
+                  <Paper
+                    elevation={2}
+                    sx={{
+                      p: 2,
+                      mb: 3,
+                      backgroundColor: "#f5f5f5",
+                      borderLeft: "4px solid #2e7d32",
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      component="div"
+                      gutterBottom
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: "#2e7d32",
+                      }}
+                    >
+                      <SummarizeIcon sx={{ mr: 1 }} />
+                      สรุปข้อมูลที่จะบันทึก
+                    </Typography>
+
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          เขตเลือกตั้ง:
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          sx={{ mb: 1, fontWeight: "medium" }}
+                        >
+                          {formData.zone_id
+                            ? getZone(formData.zone_id)?.zone_name || "ไม่ระบุ"
+                            : "ยังไม่ได้เลือก"}
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          ผู้สมัครสมาชิกสภา:
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          sx={{ mb: 1, fontWeight: "medium" }}
+                        >
+                          {formData.candidate_id
+                            ? (() => {
+                                const candidate = candidates.find(
+                                  (c) => c.uniqueId === formData.candidate_id
+                                );
+                                return candidate 
+                                  ? `${candidate.number} - ${candidate.name}`
+                                  : "ไม่ระบุ";
+                              })()
+                            : "ยังไม่ได้เลือก"}
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          หน่วยเลือกตั้ง:
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          sx={{ mb: 1, fontWeight: "medium" }}
+                        >
+                          {formData.unit_id
+                            ? getUnit(formData.unit_id)?.unit_name || "ไม่ระบุ"
+                            : "ยังไม่ได้เลือก"}
+                        </Typography>
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="textSecondary">
+                          จำนวนคะแนน:
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          sx={{ mb: 1, fontWeight: "medium" }}
+                        >
+                          {formData.votes
+                            ? `${formData.votes} คะแนน`
+                            : "ยังไม่ได้ระบุ"}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+
+                    <Divider sx={{ my: 1 }} />
+
+                    <Typography variant="body2" color="textSecondary">
+                      เวลาปัจจุบัน: {getCurrentTime()}
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                {/* Submit Button */}
+                <Grid item xs={12}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="success"
+                    size="large"
+                    fullWidth
+                    startIcon={
+                      isSubmitting ? (
+                        <CircularProgress size={24} color="inherit" />
+                      ) : (
+                        <SaveIcon />
+                      )
+                    }
+                    disabled={isSubmitting}
+                    sx={{ mt: 1, py: 1.5 }}
+                  >
+                    {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 };
 
-export default ElectionResults;
+export default CouncilVotesForm;

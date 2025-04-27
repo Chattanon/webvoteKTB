@@ -13,7 +13,6 @@ if ($conn->connect_error) {
 // Query: total of each vote type
 $sql = "
     SELECT 
-        SUM(good_votes) AS total_good,
         SUM(bad_votes) AS total_bad,
         SUM(no_vote) AS total_no_vote
     FROM vote_cards
@@ -25,7 +24,6 @@ if ($result && $row = $result->fetch_assoc()) {
     echo json_encode([
         'success' => true,
         'results' => [
-            'good_votes' => (int)$row['total_good'],
             'bad_votes' => (int)$row['total_bad'],
             'no_vote' => (int)$row['total_no_vote'],
         ]

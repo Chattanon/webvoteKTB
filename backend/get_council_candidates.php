@@ -23,7 +23,7 @@ if ($conn->connect_error) {
 }
 
 // ดึงข้อมูลผู้สมัครสมาชิกสภาทั้งหมด
-$sql = "SELECT id, name, number, color, image_base64, zone_id FROM council_candidates";
+$sql = "SELECT id, name, number, color, image_url, zone_id FROM council_candidates";
 
 $result = $conn->query($sql);
 $candidates = [];

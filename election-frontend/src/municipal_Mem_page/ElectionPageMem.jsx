@@ -50,7 +50,7 @@ const ElectionPageMem = () => {
       hoverColor: "#1565c0"
     },
     { 
-      to: "/results", 
+      to: "/council-summary", 
       icon: <HowToVoteIcon fontSize="medium" />, 
       text: "กรอกผลการเลือกตั้ง", 
       emoji: "🖍", 
@@ -65,14 +65,7 @@ const ElectionPageMem = () => {
       color: "#2e7d32", 
       hoverColor: "#1b5e20"
     },
-    { 
-      to: "/summary2", 
-      icon: <BarChartIcon fontSize="medium" />, 
-      text: "สรุปผลการเลือกตั้งกราฟ", 
-      emoji: "📊", 
-      color: "#2e7d32", 
-      hoverColor: "#1b5e20"
-    }
+ 
   ];
 
   // สีพื้นหลังแบบไล่ระดับอ่อนๆ
