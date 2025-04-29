@@ -20,8 +20,27 @@ import GroupIcon from "@mui/icons-material/Group";
 import HowToVoteIcon from "@mui/icons-material/HowToVote";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import { getFullAPI } from "../api/apiConfig";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import { getFullAPI } from "../api/apiConfig";
+
+// Function to read query parameter from URL
+const getQueryParam = (paramName, defaultValue) => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramValue = urlParams.get(paramName);
+  
+  if (paramValue && /^[1-3]$/.test(paramValue)) {
+    return parseInt(paramValue, 10);
+  }
+  
+  return defaultValue;
+};
+
+// Function to update URL without refreshing the page
+const updateUrlQueryParam = (paramName, value) => {
+  const url = new URL(window.location);
+  url.searchParams.set(paramName, value);
+  window.history.pushState({}, "", url);
+};
 
 // Enhanced Component to display council member candidates for a selected zone
 const CouncilMembersResults = ({ candidates, zone }) => {
@@ -32,7 +51,6 @@ const CouncilMembersResults = ({ candidates, zone }) => {
     // Each zone has 6 elected members
     return index < 6;
   };
-  // ฟังก์ชันจัดรูปแบบเวลาเป็นรูปแบบไทย
 
   // Calculate the maximum votes for percentage visualization
   const maxVotes = Math.max(
@@ -134,9 +152,13 @@ const CouncilMembersResults = ({ candidates, zone }) => {
                   overflow: "hidden",
                   height: "100%",
                   transition: "transform 0.3s, box-shadow 0.3s",
+                  border: "1px solid #0000", // เพิ่มขอบสีเทาอ่อนให้การ์ดทุกใบ
+
                   "&:hover": {
                     transform: "translateY(-5px)",
-                    boxShadow: "0 10px 20px rgba(0,0,0,0.15)",
+                    boxShadow: "0 10px 20px rgba(0, 0, 0, 0.74)",
+                    border: "2px solid #4CAF50",
+                    
                   },
                   ...(isWinner && {
                     border: "2px solid #4CAF50",
@@ -149,7 +171,7 @@ const CouncilMembersResults = ({ candidates, zone }) => {
                   <Box
                     sx={{
                       display: "flex",
-                      justifyContent: "space-between",
+                      justifyContent: "center",
                       alignItems: "center",
                       mb: 2,
                     }}
@@ -167,17 +189,6 @@ const CouncilMembersResults = ({ candidates, zone }) => {
                     >
                       {candidate.candidateNumber || candidate.number}
                     </Avatar>
-
-                    <Chip
-                      label={candidate.party || "กลุ่มรักกระทุ่มแบน"}
-                      size="small"
-                      sx={{
-                        bgcolor: `${candidate.color || "#1976d2"}22`,
-                        color: candidate.color || "#1976d2",
-                        fontWeight: "bold",
-                        border: `1px solid ${candidate.color || "#1976d2"}`,
-                      }}
-                    />
                   </Box>
 
                   {/* Candidate profile info */}
@@ -191,20 +202,16 @@ const CouncilMembersResults = ({ candidates, zone }) => {
                         borderRadius: "12px",
                         mr: 1,
                         border: `2px solid ${candidate.color || "#1976d2"}`,
-                        alignSelf: "center", // จัดตำแหน่งให้ตรงกลางกรอบ
+                        alignSelf: "center",
                         objectFit: "cover",
-                        objectPosition: "top", // หรือ "center top" ก็ได้
-
-                        // display: "flex", // ทำให้ Avatar เป็น flex item
-                        // justifyContent: "center", // จัดตำแหน่งให้ตรงกลาง
-                        // alignItems: "center", // จัดตำแหน่งให้ตรงกลาง
+                        objectPosition: "top",
                       }}
                       variant="rounded"
                       imgProps={{
                         loading: "lazy",
                         style: {
                           objectFit: "",
-                          objectPosition: "top", // ให้หัวอยู่ด้านบน
+                          objectPosition: "top",
                         },
                         onError: (e) => {
                           e.target.src = "/assets/mem1-1.png"; // Fallback image
@@ -325,24 +332,30 @@ const CouncilMembersResults = ({ candidates, zone }) => {
   );
 };
 
-// Main component with API integration
+// Main component with API integration and URL query parameter handling
 const ElectionResultsPageMem = () => {
-  const [selectedZone, setSelectedZone] = useState(1);
+  // Read zone from URL query string and set default to 1 if not available or invalid
+  const [selectedZone, setSelectedZone] = useState(() => {
+    return getQueryParam("zone", 1);
+  });
+  
+  // State variables
   const [candidates, setCandidates] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true); // Only for initial loading
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [totalVotes, setTotalVotes] = useState(0);
   const [apiError, setApiError] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Use refs to store previous data to prevent flickering
+  // Refs for storing previous data and controlling updates
   const previousCandidatesRef = useRef([]);
   const previousTotalVotesRef = useRef(0);
-
-  // For controlled updates
   const lastFetchTimeRef = useRef(0);
   const pendingUpdateRef = useRef(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const timeIntervalRef = useRef(null);
+  const initialLoadCompleteRef = useRef(false);
+  
+  // Function to format time
   const formatTime = (date) => {
     return date.toLocaleTimeString("th-TH", {
       hour: "2-digit",
@@ -354,13 +367,14 @@ const ElectionResultsPageMem = () => {
 
   // Available election zones
   const zones = [1, 2, 3];
-  // อัปเดตเวลาทุกวินาที
+  
+  // Update time every second
   useEffect(() => {
     timeIntervalRef.current = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
-    // ทำความสะอาด interval เมื่อคอมโพเนนต์ถูกลบออก
+    // Clean up interval when component is unmounted
     return () => {
       if (timeIntervalRef.current) {
         clearInterval(timeIntervalRef.current);
@@ -368,11 +382,29 @@ const ElectionResultsPageMem = () => {
     };
   }, []);
 
+  // Helper function to check if data has changed
+  const hasDataChanged = (newCandidates, oldCandidates) => {
+    if (newCandidates.length !== oldCandidates.length) return true;
+    
+    // Compare each candidate's votes
+    for (let i = 0; i < newCandidates.length; i++) {
+      const newCandidate = newCandidates[i];
+      const oldCandidate = oldCandidates.find(c => c.id === newCandidate.id);
+      
+      if (!oldCandidate || oldCandidate.votes !== newCandidate.votes) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Fetch candidates data when selectedZone changes
   useEffect(() => {
     const fetchCandidates = async () => {
-      // Only show loading indicator on initial load, not during updates
-      if (candidates.length === 0) {
-        setLoadingData(true);
+      // Only show loading indicator on initial load
+      if (!initialLoadCompleteRef.current) {
+        setInitialLoading(true);
       }
 
       // Prepare timestamp to prevent race conditions
@@ -380,7 +412,7 @@ const ElectionResultsPageMem = () => {
       lastFetchTimeRef.current = fetchTimestamp;
 
       try {
-        // Updated API endpoint with cache-busting parameter
+        // Add cache-busting parameter to prevent browser caching
         const cacheBuster = `&cache=${fetchTimestamp}`;
         const response = await fetch(
           getFullAPI(
@@ -388,16 +420,16 @@ const ElectionResultsPageMem = () => {
           )
         );
 
+        // Check if this is still the most recent request
+        if (fetchTimestamp < lastFetchTimeRef.current) {
+          return; // A newer request has superseded this one
+        }
+
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
         const data = await response.json();
-
-        // Check if this is still the most recent request
-        if (fetchTimestamp < lastFetchTimeRef.current) {
-          return; // A newer request has superseded this one
-        }
 
         if (data.success) {
           // Map API data to component format
@@ -412,16 +444,15 @@ const ElectionResultsPageMem = () => {
             image_url: candidate.image_url,
           }));
 
-          // Update state only if there are actual changes in the data
-          const dataChanged =
-            JSON.stringify(candidatesData) !==
-              JSON.stringify(previousCandidatesRef.current) ||
-            data.totalVotes !== previousTotalVotesRef.current;
-
-          if (dataChanged) {
+          // Only update state if there are actual changes
+          if (hasDataChanged(candidatesData, previousCandidatesRef.current) || 
+              data.totalVotes !== previousTotalVotesRef.current) {
+            
+            // Update refs first to prevent stale data comparisons
             previousCandidatesRef.current = candidatesData;
             previousTotalVotesRef.current = data.totalVotes;
-
+            
+            // Then update state
             setCandidates(candidatesData);
             setTotalVotes(data.totalVotes);
             setLastUpdate(new Date(data.lastUpdate));
@@ -435,8 +466,11 @@ const ElectionResultsPageMem = () => {
 
         // If API fails, use previous data as fallback if available
         if (previousCandidatesRef.current.length > 0) {
-          setCandidates(previousCandidatesRef.current);
-          setTotalVotes(previousTotalVotesRef.current);
+          // No need to update state if we're already showing this data
+          if (candidates.length === 0) {
+            setCandidates(previousCandidatesRef.current);
+            setTotalVotes(previousTotalVotesRef.current);
+          }
         } else {
           // If no previous data, use mock data
           const mockCandidatesData = [
@@ -451,23 +485,34 @@ const ElectionResultsPageMem = () => {
               color: "#FF8C00",
               image: "/assets/mem1-1.png",
             },
+            // Add more mock candidates if needed
           ];
 
-          setCandidates(mockCandidatesData);
-          setTotalVotes(
-            mockCandidatesData.reduce((sum, c) => sum + c.votes, 0)
-          );
           previousCandidatesRef.current = mockCandidatesData;
           previousTotalVotesRef.current = mockCandidatesData.reduce(
-            (sum, c) => sum + c.votes,
-            0
+            (sum, c) => sum + c.votes, 0
           );
+          
+          setCandidates(mockCandidatesData);
+          setTotalVotes(previousTotalVotesRef.current);
         }
       } finally {
-        setLoadingData(false);
+        if (!initialLoadCompleteRef.current) {
+          setInitialLoading(false);
+          initialLoadCompleteRef.current = true;
+        }
       }
     };
 
+    // Reset data and refs when zone changes
+    if (initialLoadCompleteRef.current) {
+      previousCandidatesRef.current = [];
+      previousTotalVotesRef.current = 0;
+      initialLoadCompleteRef.current = false;
+      setApiError(null);
+    }
+
+    // Initial fetch
     fetchCandidates();
 
     // Set up polling with debounce to prevent UI flicker
@@ -484,6 +529,7 @@ const ElectionResultsPageMem = () => {
 
     scheduleFetch();
 
+    // Clean up pending fetches when component unmounts or zone changes
     return () => {
       if (pendingUpdateRef.current) {
         clearTimeout(pendingUpdateRef.current);
@@ -491,10 +537,17 @@ const ElectionResultsPageMem = () => {
     };
   }, [selectedZone]);
 
+  // Handle zone change
   const handleZoneChange = (event) => {
-    setSelectedZone(event.target.value);
-    // Reset data when changing zone to show loading state
+    const newZone = event.target.value;
+    setSelectedZone(newZone);
+    
+    // Update URL to match selected zone
+    updateUrlQueryParam("zone", newZone);
+    
+    // Reset state for zone change
     setApiError(null);
+    setInitialLoading(true);
   };
 
   return (
@@ -624,7 +677,7 @@ const ElectionResultsPageMem = () => {
         <Grid container spacing={2} direction="column">
           {/* Bottom section - Candidates Results */}
           <Grid item xs={12} sx={{ mt: 2 }}>
-            {loadingData ? (
+            {initialLoading ? (
               <Box sx={{ width: "100%", textAlign: "center", py: 10 }}>
                 <LinearProgress />
                 <Typography sx={{ mt: 2 }}>กำลังโหลดข้อมูล...</Typography>
